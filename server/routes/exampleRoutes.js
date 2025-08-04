@@ -1,15 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const Example = require('../models/exampleModel');
+const exampleController = require('../controllers/exampleController');
 
-// שליפת כל הדאטה
-router.get('/', async (req, res) => {
-  try {
-    const data = await Example.find();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get('/', exampleController.getAllExamplesController);
+router.get('/:id', exampleController.getExampleByIdController);
+router.post('/add', exampleController.createExampleController);
+router.put('/:id', exampleController.updateExampleController);
+router.delete('/:id', exampleController.deleteExampleController);
 
 module.exports = router;
