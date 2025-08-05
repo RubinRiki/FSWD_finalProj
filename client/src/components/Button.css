@@ -1,0 +1,26 @@
+.custom-button {
+  background-color: #4caf50;
+  color: white;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 16px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.custom-button:hover {
+  background-color: #43a047;
+  transform: translateY(-1px);
+}
+
+.custom-button:active {
+  transform: translateY(1px);
+}
+
+.custom-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
