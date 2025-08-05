@@ -16,6 +16,7 @@ const uploadMiddleware = require('./middleware/uploadMiddleware');
 const exampleRoutes = require('./routes/exampleRoutes');
 const authRoutes = require('./routes/authRoutes'); 
 
+
 connectDB();
 
 app.use(cors(corsOptions));  //TODO: Configure CORS as needed
