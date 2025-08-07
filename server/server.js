@@ -15,18 +15,21 @@ const uploadMiddleware = require('./middleware/uploadMiddleware');
 // Routes
 const exampleRoutes = require('./routes/exampleRoutes');
 const authRoutes = require('./routes/authRoutes'); 
+const coursesRoutes = require('./routes/courses');
 
 
 connectDB();
 
-app.use(cors(corsOptions));  //TODO: Configure CORS as needed
+app.use(cors(corsOptions)); 
 app.use(express.json());
 app.use(logger);
 
+app.use('/api/example', exampleRoutes);//DELETE
 
 
 app.use('/api/auth', authRoutes); 
-app.use('/api/example', exampleRoutes);
+app.use('/api/courses', coursesRoutes);
+
 
 // TODO: Use auth middleware on protected routes, e.g.:
 // app.use('/api/private', authMiddleware, privateRoutes);
