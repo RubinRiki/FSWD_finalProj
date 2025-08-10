@@ -2,11 +2,11 @@ const courseService = require('../services/courseService');
 
 const getCoursesByTeacher = async (req, res, next) => {
   try {
-    const teacherId = req.user.id;
+    const teacherId = req.user.sub;
     const courses = await courseService.getCoursesByTeacher(teacherId);
     res.json(courses);
   } catch (err) {
-    next(err);
+    next(err); 
   }
 };
 

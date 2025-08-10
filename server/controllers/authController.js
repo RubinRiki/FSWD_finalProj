@@ -1,28 +1,28 @@
-
+// controllers/authController.js
 const authService = require('../services/authService');
 
 /**
- * Register new user controller
+ * Controller: Register new user
  */
 exports.registerController = async (req, res) => {
   try {
-    const newUser = await authService.register(req.body);
-    res.status(201).json(newUser);
+    const { token, user } = await authService.register(req.body);
+    res.status(201).json({ token, user });
   } catch (error) {
-    // TODO: Handle errors like user already exists
-    res.status(400).json({ message: error.message });
+    // Keep error key consistent for the client
+    res.status(400).json({ error: error.message });
   }
 };
 
 /**
- * Login user controller
+ * Controller: Login user
  */
 exports.loginController = async (req, res) => {
   try {
     const { user, token } = await authService.login(req.body.email, req.body.password);
     res.json({ user, token });
   } catch (error) {
-    // TODO: Handle authentication failure (invalid credentials)
-    res.status(401).json({ message: error.message });
+    // Keep error key consistent for the client
+    res.status(401).json({ error: error.message });
   }
 };

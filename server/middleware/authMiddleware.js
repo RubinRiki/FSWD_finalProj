@@ -1,11 +1,9 @@
 const jwtUtils = require('../utils/jwtUtils');
 
 const authMiddleware = (req, res, next) => {
-   // DEV MODE: use fixed user ID
-  req.user = { id: '1cbe7a6e-8f91-4b7f-bdc7-2acbc17f8459' }; // ← replace with your actual user ID
-  return next();
 
- /*  const authHeader = req.headers.authorization;
+
+  const authHeader = req.headers.authorization;
   if (!authHeader) {
     return res.status(401).json({ message: 'No token provided' });
   }
@@ -18,7 +16,7 @@ const authMiddleware = (req, res, next) => {
     next();
   } catch (err) {
     res.status(401).json({ message: 'Invalid token' });
-  } */
+  }
 };
 
 module.exports = authMiddleware;

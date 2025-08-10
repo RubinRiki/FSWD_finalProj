@@ -1,8 +1,7 @@
 const Course = require('../models/Course');
 
 const getCoursesByTeacher = async (teacherId) => {
-  const courses = await Course.find({ createdBy: teacherId });
-  return courses;
+  return Course.find({ createdBy: teacherId }).sort({ createdAt: -1 });
 };
 
 module.exports = {

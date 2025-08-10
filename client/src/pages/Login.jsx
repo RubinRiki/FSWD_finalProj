@@ -1,46 +1,56 @@
- 
-import { useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import Button from '../components/Button';
-
+import { useContext, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 
 export default function Login() {
-  const [formData, setFormData] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
+
+  const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     try {
-      const res = await axios.post('/api/auth/login', formData);
-      const { token, user } = res.data;
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-
-      if (user.role === 'teacher') {
-        navigate('/teacher/dashboard');
-      } else {
-        navigate('/student/dashboard');
-      }
+      const user = await login(formData.email.trim(), formData.password);
+      if (user.role === 'teacher') navigate('/teacher/dashboard');
+      else navigate('/student/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      const msg = err?.response?.data?.error || err?.message || 'Login failed';
+      setError(msg);
     }
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: 'auto' }}>
+    <form onSubmit={handleSubmit} style={{ maxWidth: 400, margin: 'auto' }}>
       <h2>Login</h2>
-      <form onSubmit={handleSubmit}>
-        <input name="email" type="email" placeholder="Email" onChange={handleChange} required /><br />
-        <input name="password" type="password" placeholder="Password" onChange={handleChange} required /><br />
-        <Button type="submit">Login</Button>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-      </form>
-    </div>
+      <input
+        name="email"
+        type="email"
+        placeholder="Email"
+        value={formData.email}
+        onChange={handleChange}
+        autoComplete="email"
+        required
+      />
+      <br />
+      <input
+        name="password"
+        type="password"
+        placeholder="Password"
+        value={formData.password}
+        onChange={handleChange}
+        autoComplete="current-password"
+        required
+      />
+      <br />
+      <button type="submit">Login</button>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+      <p>Don&apos;t have an account? <Link to="/register">Register</Link></p>
+    </form>
   );
 }

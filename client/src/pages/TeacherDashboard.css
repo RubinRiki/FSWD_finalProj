@@ -1,0 +1,80 @@
+/* Container with two responsive breakpoints (mobile + desktop) */
+.td-container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+/* Header: title + actions (search + create) */
+.td-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.td-title { font-size: 22px; font-weight: 700; margin: 0; }
+.td-actions { display: flex; gap: 8px; align-items: center; }
+
+/* Search input scales nicely */
+.td-search input {
+  width: min(52vw, 420px);
+  max-width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+/* Buttons */
+.td-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 12px; border: 1px solid #e5e7eb; border-radius: 10px;
+  background: #fff; cursor: pointer; font-weight: 600;
+}
+.td-btn.primary {
+  background: #4f46e5; color: #fff; border-color: #4f46e5;
+}
+.td-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Panels (neutral containers) */
+.td-panel {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+/* Stats bar */
+.td-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.td-stat { border: 1px dashed #e5e7eb; border-radius: 10px; padding: 12px; }
+.td-stat-label { font-size: 12px; color: #6b7280; margin-bottom: 6px; }
+.td-stat-value { font-size: 20px; font-weight: 700; }
+
+/* Section titles */
+.td-section-title { font-size: 16px; font-weight: 700; margin: 0 0 10px 0; }
+
+/* Courses grid */
+.td-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+/* Recent activity list */
+.td-activity { list-style: none; margin: 0; padding: 0; }
+.td-activity-item { padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+.td-activity-item:last-child { border-bottom: 0; }
+
+/* State blocks */
+.td-state { text-align: center; color: #64748b; }
+.td-state.error { color: #ef4444; }
+
+/* Responsive: mobile-first */
+@media (max-width: 768px) {
+  .td-header { grid-template-columns: 1fr; }
+  .td-actions { justify-content: space-between; }
+  .td-search input { width: 100%; }
+  .td-stats { grid-template-columns: 1fr; }
+}

@@ -1,36 +1,41 @@
 import { useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import Button from '../components/Button';
-
+import { useNavigate, Link } from 'react-router-dom';
+import { useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
 
 export default function Register() {
+  const { register } = useContext(AuthContext);
   const [formData, setFormData] = useState({
-    fullName: '',
+    name: '',   // ← שינוי מ-fullName ל-name
     email: '',
     password: '',
     confirmPassword: '',
     role: 'student'
   });
-  const navigate = useNavigate();
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  const handleChange = (e) => {
+  const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      setError('Passwords do not match');
       return;
     }
-
     try {
-      const res = await axios.post('/api/auth/register', formData);
-      navigate('/login');
+      await register({
+        name: formData.name.trim(),
+        email: formData.email.trim().toLowerCase(),
+        role: formData.role,
+        password: formData.password
+      });
+      navigate('/dashboard'); // או ישר ל-/login אם את מעדיפה
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
+      const msg = err?.response?.data?.error || err?.message || 'Registration failed';
+      setError(msg);
     }
   };
 
@@ -38,22 +43,24 @@ export default function Register() {
     <div style={{ maxWidth: 400, margin: 'auto' }}>
       <h2>Register</h2>
       <form onSubmit={handleSubmit}>
-        <input name="fullName" placeholder="Full Name" onChange={handleChange} required /><br />
-        <input name="email" type="email" placeholder="Email" onChange={handleChange} required /><br />
-        <input name="password" type="password" placeholder="Password" onChange={handleChange} required /><br />
-        <input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} required /><br />
+        <input name="name" placeholder="Full Name" value={formData.name} onChange={handleChange} required /><br />
+        <input name="email" type="email" placeholder="Email" value={formData.email} onChange={handleChange} required /><br />
+        <input name="password" type="password" placeholder="Password" value={formData.password} onChange={handleChange} required /><br />
+        <input name="confirmPassword" type="password" placeholder="Confirm Password" value={formData.confirmPassword} onChange={handleChange} required /><br />
 
         <label>
           <input type="radio" name="role" value="student" checked={formData.role === 'student'} onChange={handleChange} />
           Student
         </label>
-        <label>
+        <label style={{ marginLeft: 12 }}>
           <input type="radio" name="role" value="teacher" checked={formData.role === 'teacher'} onChange={handleChange} />
           Teacher
-        </label><br />
+        </label>
+        <br />
 
-        <Button type="submit">Register</Button>
+        <button type="submit">Create account</button>
         {error && <p style={{ color: 'red' }}>{error}</p>}
+        <p>Already have an account? <Link to="/login">Login</Link></p>
       </form>
     </div>
   );

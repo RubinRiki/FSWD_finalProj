@@ -13,7 +13,6 @@ const errorHandler = require('./middleware/errorHandler');
 const uploadMiddleware = require('./middleware/uploadMiddleware');
 
 // Routes
-const exampleRoutes = require('./routes/exampleRoutes');
 const authRoutes = require('./routes/authRoutes'); 
 const coursesRoutes = require('./routes/courses');
 
@@ -24,7 +23,6 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(logger);
 
-app.use('/api/example', exampleRoutes);//DELETE
 
 
 app.use('/api/auth', authRoutes); 

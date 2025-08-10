@@ -1,45 +1,62 @@
+// services/authService.js
 const User = require('../models/User');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const { generateToken } = require('../utils/jwtUtils');
 
+/**
+ * Registers a new user.
+ * Expects: { name? , fullName? , email, password, role }
+ * Stores hashed password in `passwordHash` and standardizes name.
+ */
 const register = async (userData) => {
-  // Check if user with given email already exists
-  const existingUser = await User.findOne({ email: userData.email });
-  if (existingUser) {
+  const { name, fullName, email, password, role = 'student' } = userData;
+
+  if (!email || !password) {
+    throw new Error('Email and password are required');
+  }
+
+  const exists = await User.findOne({ email });
+  if (exists) {
     throw new Error('User already exists');
   }
 
-  // Hash the user's password before saving
-  const hashedPassword = await bcrypt.hash(userData.password, 10);
-  userData.password = hashedPassword;
+  const passwordHash = await bcrypt.hash(password, 10);
 
-  // Create and save the new user
-  const newUser = new User(userData);
-  await newUser.save();
+  const user = await User.create({
+    name: name || fullName, // accept legacy "fullName" from client
+    email,
+    role,
+    passwordHash
+  });
 
-  return newUser;
+  const token = generateToken({ sub: user._id.toString(), role: user.role });
+
+  return {
+    token,
+    user: { _id: user._id, name: user.name, email: user.email, role: user.role }
+  };
 };
 
+/**
+ * Logs in an existing user.
+ * Expects: (email, password)
+ * Loads `passwordHash` explicitly and compares with bcrypt.
+ */
 const login = async (email, password) => {
-  // Find user by email
-  const user = await User.findOne({ email });
-  if (!user) {
-    throw new Error('Invalid credentials');
-  }
+  if (!email || !password) throw new Error('Email and password are required');
 
-  // Compare provided password with hashed password in DB
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
-    throw new Error('Invalid credentials');
-  }
+  const user = await User.findOne({ email }).select('+passwordHash');
+  if (!user) throw new Error('Invalid credentials');
 
-  // Generate JWT token for authenticated user
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  const ok = await bcrypt.compare(password, user.passwordHash);
+  if (!ok) throw new Error('Invalid credentials');
 
-  return { user, token };
+  const token = generateToken({ sub: user._id.toString(), role: user.role });
+
+  return {
+    token,
+    user: { _id: user._id, name: user.name, email: user.email, role: user.role }
+  };
 };
 
-module.exports = {
-  register,
-  login,
-};
+module.exports = { register, login };
