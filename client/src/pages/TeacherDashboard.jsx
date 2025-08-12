@@ -1,155 +1,137 @@
-import React, { useEffect, useMemo, useState, useContext } from 'react';
-import { MdAddCircle, MdRefresh } from 'react-icons/md';
+// src/pages/TeacherDashboard.jsx
+import React, { useEffect, useState, useContext } from 'react';
+import { MdAddCircle, MdRefresh, MdLogout } from 'react-icons/md';
 import CourseCard from '../components/CourseCard';
-import { getTeachingCourses } from '../services/teacherApi';
+import { getCoursesList, createCourse } from '../services/teacherApi';
 import { AuthContext } from '../context/AuthContext';
+import { confirm, toast, error, promptCourse } from '../utils/alerts';
 import './TeacherDashboard.css';
 
-const TeacherDashboard = () => {
-  const { user } = useContext(AuthContext);
+export default function TeacherDashboard() {
+  const { user, logout } = useContext(AuthContext);
   const teacherName = user?.name || 'Teacher';
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
-  const [q, setQ] = useState(''); // search query
 
-  const load = async () => {
+  const [q, setQ] = useState('');
+  const [limit, setLimit] = useState(12);
+  const [sort, setSort] = useState('-createdAt');
+
+  const fetchCourses = ({ limit, q, sort }) => getCoursesList({ limit, q, sort });
+
+  const loadCourses = async () => {
     setLoading(true);
     setErr('');
     try {
-      const data = await getTeachingCourses();
+      const { data } = await fetchCourses({ limit, q, sort });
       setCourses(Array.isArray(data) ? data : []);
     } catch (e) {
       const msg = e?.response?.data?.error || e?.message || 'Failed to load courses';
       setErr(msg);
+      error('Load error', msg);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const data = await getTeachingCourses();
-        if (!mounted) return;
-        setCourses(Array.isArray(data) ? data : []);
-      } catch (e) {
-        if (!mounted) return;
-        const msg = e?.response?.data?.error || e?.message || 'Failed to load courses';
-        setErr(msg);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
+  useEffect(() => { loadCourses(); }, [limit, q, sort]);
 
-  // basic client-side filtering by course title
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return courses;
-    return courses.filter(c => (c?.title || '').toLowerCase().includes(term));
-  }, [courses, q]);
+  const setSortSafe = (v) => setSort(v);
 
-  // lightweight stats :
-  const stats = useMemo(() => {
-    const totalCourses = courses.length;
-    const totalStudents = courses.reduce((acc, c) => acc + (c?.studentsCount ?? 0), 0);
-    const pendingSubs  = courses.reduce((acc, c) => acc + (c?.pendingSubmissionsCount ?? 0), 0);
-    return { totalCourses, totalStudents, pendingSubs };
-  }, [courses]);
+  const handleLogout = async () => {
+    const res = await confirm({
+      title: 'Log out?',
+      text: 'You will be returned to the login screen.',
+      confirmButtonText: 'Log out',
+    });
+    if (res.isConfirmed) logout();
+  };
+
+  const handleCreateClick = async () => {
+    const values = await promptCourse();
+    if (!values) return;
+    try {
+      await createCourse(values);
+      await loadCourses();
+      toast({ icon: 'success', title: 'Course created' });
+    } catch (e) {
+      const msg = e?.response?.data?.error || e?.message || 'Failed to create course';
+      error('Action failed', msg);
+    }
+  };
 
   return (
     <div className="td-container">
-      {/* HEADER */}
       <header className="td-header">
-        <h1 className="td-title">שלום, {teacherName}</h1>
-        <div className="td-actions">
-          <div className="td-search">
-            <input
-              type="search"
-              placeholder="Search courses…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              aria-label="Search courses"
-            />
-          </div>
-          <button className="td-btn primary" disabled={loading}>
+        <h1 className="td-title">Hello, {teacherName}</h1>
+        <div className="td-header-actions">
+          <button className="td-btn primary" disabled={loading} onClick={handleCreateClick}>
             <MdAddCircle size={18} />
             <span>Create Course</span>
+          </button>
+          <button className="td-btn" onClick={handleLogout}>
+            <MdLogout size={18} />
+            <span>Log out</span>
           </button>
         </div>
       </header>
 
-      {/* STATES */}
+      <div className="td-filters">
+        <div className="td-search">
+          <input
+            type="search"
+            placeholder="Search courses…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Search courses"
+          />
+        </div>
+        <div className="td-sort">
+          <button className={sort === '-createdAt' ? 'active' : ''} onClick={() => setSortSafe('-createdAt')} aria-pressed={sort === '-createdAt'}>Newest</button>
+          <button className={sort === 'createdAt' ? 'active' : ''} onClick={() => setSortSafe('createdAt')} aria-pressed={sort === 'createdAt'}>Oldest</button>
+          <button className={sort === 'title' ? 'active' : ''} onClick={() => setSortSafe('title')} aria-pressed={sort === 'title'}>A→Z</button>
+          <button className={sort === '-title' ? 'active' : ''} onClick={() => setSortSafe('-title')} aria-pressed={sort === '-title'}>Z→A</button>
+        </div>
+        <select className="td-limit" value={limit} onChange={(e) => setLimit(Number(e.target.value))} aria-label="Items per page">
+          <option value={6}>6</option><option value={12}>12</option><option value={24}>24</option><option value={48}>48</option>
+        </select>
+      </div>
+
       {loading && (
-        <div className="td-panel td-state">Loading courses…</div>
+        <div className="td-panel td-notice">
+          <div className="td-spinner" aria-hidden />
+          <div>Loading courses…</div>
+        </div>
       )}
 
       {!loading && err && (
-        <div className="td-panel td-state error">
+        <div className="td-panel td-notice error" role="alert">
           <div>{err}</div>
-          <button className="td-btn" onClick={load}>
+          <button className="td-btn" onClick={loadCourses}>
             <MdRefresh size={16} />
             <span>Retry</span>
           </button>
         </div>
       )}
 
-      {/* CONTENT */}
       {!loading && !err && (
-        <>
-          {/* STATS BAR */}
-          <section className="td-panel td-stats">
-            <div className="td-stat">
-              <div className="td-stat-label">Courses</div>
-              <div className="td-stat-value">{stats.totalCourses}</div>
-            </div>
-            <div className="td-stat">
-              <div className="td-stat-label">Students</div>
-              <div className="td-stat-value">{stats.totalStudents}</div>
-            </div>
-            <div className="td-stat">
-              <div className="td-stat-label">Pending submissions</div>
-              <div className="td-stat-value">{stats.pendingSubs}</div>
-            </div>
-          </section>
-
-          {/* COURSES GRID / EMPTY */}
-          {filtered.length === 0 ? (
-            <div className="td-panel td-state">
-              {q ? (
-                <div>couldnt find matching courses“{q}”.</div>
-              ) : (
-                <div>
-                    No courses yet. Click "Create Course" above to add your first course.
-                </div>
-              )}
-            </div>
-          ) : (
-            <section className="td-panel">
-              <h2 className="td-section-title">My Courses</h2>
-              <div className="td-grid">
-                {filtered.map((course) => (
-                  <CourseCard key={course._id} course={course} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* RECENT ACTIVITY (placeholder – לחיבור ל‑API בהמשך) */}
+        courses.length === 0 ? (
+        <div className="td-panel td-notice empty">
+            {q ? <>No matches for “{q}”.</> : <>No courses yet. Click <strong>Create Course</strong>.</>}
+        </div>
+        ) : (
           <section className="td-panel">
-            <h2 className="td-section-title">Recent Activity</h2>
-            <ul className="td-activity">
-              <li className="td-activity-item">— (hook to API: recent submissions & upcoming deadlines)</li>
-            </ul>
+            <h2 className="td-section-title">My Courses</h2>
+            <div className="td-grid">
+              {courses.map((c) => (
+                <CourseCard key={c._id} course={{ ...c, assignmentsCount: c.count ?? c.assignmentsCount ?? 0 }} />
+              ))}
+            </div>
           </section>
-        </>
+        )
       )}
     </div>
   );
-};
-
-export default TeacherDashboard;
+}

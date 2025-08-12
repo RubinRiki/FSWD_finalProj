@@ -9,3 +9,10 @@ export const register = async ({ name, email, role, password }) => {
   const { data } = await api.post('/auth/register', { name, email, role, password });
   return data; // { token, user }
 };
+export const logout = async () => {
+  try {
+    await api.post('/auth/logout');
+  } catch (e) {
+  }
+  return true;
+};

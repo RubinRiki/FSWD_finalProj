@@ -1,9 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../middleware/authMiddleware');
+const auth = require('../middleware/authMiddleware');
+const { requireRole } = require('../middleware/roles');
 const courseController = require('../controllers/courseController');
 
-// GET /api/courses/teaching → get courses created by the logged-in teacher
-router.get('/teaching', authMiddleware, courseController.getCoursesByTeacher);
+router.use(auth);
+console.log("In courses route");
+
+router.get('/list', courseController.getCoursesForUserController);
+router.post('/', requireRole('teacher'), courseController.createCourseController);
+router.get('/:id/details', courseController.getCourseDetailsController);
+
 
 module.exports = router;

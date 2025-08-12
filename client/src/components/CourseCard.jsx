@@ -8,7 +8,7 @@ const CourseCard = ({ course }) => {
   const navigate = useNavigate();
 
   const handleEnterCourse = () => {
-    if (course?._id) navigate(`/teacher/course/${course._id}`);
+    if (course?._id) navigate(`/courses/${course._id}`)
   };
 
   return (

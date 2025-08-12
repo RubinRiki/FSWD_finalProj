@@ -8,9 +8,7 @@ const corsOptions = require('./config/corsOptions');
 
 // Import your middleware modules
 const logger = require('./middleware/logger');
-const authMiddleware = require('./middleware/authMiddleware');
 const errorHandler = require('./middleware/errorHandler');
-const uploadMiddleware = require('./middleware/uploadMiddleware');
 
 // Routes
 const authRoutes = require('./routes/authRoutes'); 
@@ -23,9 +21,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(logger);
 
-
-
-app.use('/api/auth', authRoutes); 
+app.use('/api/auth', authRoutes);
 app.use('/api/courses', coursesRoutes);
 
 
@@ -33,6 +29,8 @@ app.use('/api/courses', coursesRoutes);
 // app.use('/api/private', authMiddleware, privateRoutes);
 
 // TODO: Add other routes here
+
+app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 
 app.use(errorHandler);
 

@@ -1,6 +1,8 @@
 import api from './api';
 
-export const getTeachingCourses = async () => {
-  const res = await api.get('/courses/teaching'); 
-  return res.data; 
-}
+// params: { limit, q, sort }  |  sort: '-createdAt' | 'createdAt' | 'title' | '-title'
+export const getCoursesList = (params = {}) =>
+  api.get('/courses/list', { params }).then(r => r.data);
+
+export const createCourse = (payload) =>
+  api.post('/courses', payload).then(r => r.data);

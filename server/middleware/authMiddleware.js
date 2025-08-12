@@ -1,21 +1,15 @@
 const jwtUtils = require('../utils/jwtUtils');
 
 const authMiddleware = (req, res, next) => {
-
-
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
-
-  const token = authHeader.split(' ')[1]; // Assuming "Bearer token..."
-
+  const h = req.headers.authorization || '';
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  if (!m) return res.status(401).json({ error: 'No token provided' });
   try {
-    const decoded = jwtUtils.verifyToken(token);
+    const decoded = jwtUtils.verifyToken(m[1]);
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(401).json({ message: 'Invalid token' });
+    return res.status(401).json({ error: 'Invalid token' });
   }
 };
 

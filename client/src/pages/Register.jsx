@@ -1,16 +1,15 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
 export default function Register() {
   const { register } = useContext(AuthContext);
   const [formData, setFormData] = useState({
-    name: '',   // ← שינוי מ-fullName ל-name
+    name: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'student'
+    role: 'student',
   });
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -26,13 +25,17 @@ export default function Register() {
       return;
     }
     try {
-      await register({
+      const user = await register({
         name: formData.name.trim(),
         email: formData.email.trim().toLowerCase(),
         role: formData.role,
-        password: formData.password
+        password: formData.password,
       });
-      navigate('/dashboard'); // או ישר ל-/login אם את מעדיפה
+      if (user?.role === 'teacher') {
+        navigate('/teacher/dashboard', { replace: true });
+      } else {
+        navigate('/student/dashboard', { replace: true });
+      }
     } catch (err) {
       const msg = err?.response?.data?.error || err?.message || 'Registration failed';
       setError(msg);
@@ -42,12 +45,11 @@ export default function Register() {
   return (
     <div style={{ maxWidth: 400, margin: 'auto' }}>
       <h2>Register</h2>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <input name="name" placeholder="Full Name" value={formData.name} onChange={handleChange} required /><br />
         <input name="email" type="email" placeholder="Email" value={formData.email} onChange={handleChange} required /><br />
         <input name="password" type="password" placeholder="Password" value={formData.password} onChange={handleChange} required /><br />
         <input name="confirmPassword" type="password" placeholder="Confirm Password" value={formData.confirmPassword} onChange={handleChange} required /><br />
-
         <label>
           <input type="radio" name="role" value="student" checked={formData.role === 'student'} onChange={handleChange} />
           Student
@@ -57,7 +59,6 @@ export default function Register() {
           Teacher
         </label>
         <br />
-
         <button type="submit">Create account</button>
         {error && <p style={{ color: 'red' }}>{error}</p>}
         <p>Already have an account? <Link to="/login">Login</Link></p>
