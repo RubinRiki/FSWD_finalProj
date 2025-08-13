@@ -13,6 +13,8 @@ const errorHandler = require('./middleware/errorHandler');
 // Routes
 const authRoutes = require('./routes/authRoutes'); 
 const coursesRoutes = require('./routes/courses');
+const assignmentsRoutes = require('./routes/assignments');
+const enrollmentsRoutes = require('./routes/enrollments');
 
 
 connectDB();
@@ -23,6 +25,8 @@ app.use(logger);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', coursesRoutes);
+app.use('/api/assignments', assignmentsRoutes);
+app.use('/api/enrollments', enrollmentsRoutes);
 
 
 // TODO: Use auth middleware on protected routes, e.g.:

@@ -7,6 +7,29 @@ const toOid = (v) =>
 /**
  * Counts how many assignments each course has (one DB query, grouped by courseId).
 **/
+function parseSort(s = '-createdAt') {
+  const out = {};
+  String(s).split(',').forEach(tok => {
+    const key = tok.replace(/^-/, '');
+    const dir = tok.startsWith('-') ? -1 : 1;
+    if (key) out[key] = dir;
+  });
+  return out;
+}
+
+async function listAssignmentsForCourse({ course, sort = '-createdAt', page = 1, limit = 50 }) {
+  if (!course) throw new Error('course is required');
+  const courseId = toOid(course);
+  const p = Math.max(parseInt(page) || 1, 1);
+  const l = Math.min(Math.max(parseInt(limit) || 50, 1), 100);
+  const filter = { courseId };
+  const [items, total] = await Promise.all([
+    Assignment.find(filter).sort(parseSort(sort)).skip((p - 1) * l).limit(l).select('_id title dueDate').lean(),
+    Assignment.countDocuments(filter),
+  ]);
+  return { items, total, page: p, limit: l };
+}
+
 async function countAssignmentsByCourseIds(courseIds = []) {
   if (!Array.isArray(courseIds) || courseIds.length === 0) return new Map();
 
@@ -20,4 +43,7 @@ async function countAssignmentsByCourseIds(courseIds = []) {
   return new Map(rows.map(r => [String(r._id), r.c]));
 }
 
-module.exports = { countAssignmentsByCourseIds };
+module.exports = {
+     countAssignmentsByCourseIds, 
+     listAssignmentsForCourse
+     };

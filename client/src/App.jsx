@@ -4,6 +4,7 @@ import { AuthProvider, AuthContext } from './context/AuthContext';
 
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Auth from './pages/Auth';
 import TeacherDashboard from './pages/TeacherDashboard';
 import CourseDetails from './pages/CourseDetails';
 import StudentDashboard from './pages/StudentDashboard';
@@ -34,8 +35,8 @@ export default function App() {
     <AuthProvider>
         <Routes>
           <Route path="/" element={<HomeRedirect />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<Auth />} />
+          <Route path="/register" element={<Auth />} />
 
           <Route
  path="/teacher/dashboard"

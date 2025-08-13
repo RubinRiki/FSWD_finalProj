@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MdFolderOpen } from 'react-icons/md';
-import Button from './Button';
 import './CourseCard.css'; 
 
 const CourseCard = ({ course }) => {
@@ -17,10 +16,10 @@ const CourseCard = ({ course }) => {
       <p>Assignments: {course?.assignmentsCount ?? 0}</p>
 
       <div className="card-actions">
-        <Button onClick={handleEnterCourse}>
+        <button onClick={handleEnterCourse}>
           <MdFolderOpen style={{ marginRight: 6 }} />
           Manage Course
-        </Button>
+        </button>
       </div>
     </div>
   );

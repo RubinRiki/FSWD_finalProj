@@ -1,7 +1,6 @@
 import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Button from '../components/Button';
 import { AuthContext } from '../context/AuthContext';
 
 export default function Login() {
@@ -59,7 +58,7 @@ export default function Login() {
           required
           style={{ display: 'block', marginBottom: '10px', width: '100%', padding: '8px' }}
         />
-        <Button type="submit">Login</Button>
+        <button type="submit">Login</button>
         {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
       </form>
     </div>
