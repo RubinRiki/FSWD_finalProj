@@ -6,10 +6,11 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import TeacherDashboard from './pages/TeacherDashboard';
 import CourseDetails from './pages/CourseDetails';
+import StudentDashboard from './pages/StudentDashboard';
 
-function StudentDashboard() {
+/*function StudentDashboard() {
   return <div>Student Dashboard</div>;
-}
+}*/
 
 function HomeRedirect() {
   const { isAuthenticated, user } = useContext(AuthContext);
