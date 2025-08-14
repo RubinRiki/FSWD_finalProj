@@ -1,11 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { getEnrolledCourses, getStudentAssignments } from '../services/StudentApi'; // שימי לב לנתיב ולשם הקובץ
+import React, { useEffect, useState, useContext } from 'react';
+import { getEnrolledCourses, getStudentAssignments } from '../services/StudentApi';
+import { AuthContext } from '../context/AuthContext';
+import { MdLogout } from 'react-icons/md';
 import './StudentDashboard.css';
 
 export default function StudentDashboard() {
   const [courses, setCourses] = useState([]);
   const [assignments, setAssignments] = useState({});
   const [loading, setLoading] = useState(true);
+
+  const { logout } = useContext(AuthContext);
 
   useEffect(() => {
     getEnrolledCourses()
@@ -32,9 +36,21 @@ export default function StudentDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleLogout = () => {
+    logout(); // כבר עושה ניקוי localStorage ו־redirect ל־/login
+  };
+
   if (loading) {
     return (
-      <div className="sd-container sd-notice" style={{ justifyContent: 'center', minHeight: '100vh', alignItems: 'center', display: 'flex' }}>
+      <div
+        className="sd-container sd-notice"
+        style={{
+          justifyContent: 'center',
+          minHeight: '100vh',
+          alignItems: 'center',
+          display: 'flex'
+        }}
+      >
         <div className="sd-spinner" aria-label="Loading" />
       </div>
     );
@@ -44,6 +60,10 @@ export default function StudentDashboard() {
     <div className="sd-container">
       <header className="sd-header">
         <h1 className="sd-title">הדשבורד שלי</h1>
+        <button className="td-btn" onClick={handleLogout}>
+          <MdLogout size={18} />
+          <span>Log out</span>
+        </button>
       </header>
 
       {courses.length === 0 ? (
