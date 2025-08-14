@@ -8,6 +8,7 @@ import Auth from './pages/Auth';
 import TeacherDashboard from './pages/TeacherDashboard';
 import CourseDetails from './pages/CourseDetails';
 import StudentDashboard from './pages/StudentDashboard';
+import Submissions from './pages/Submissions';
 
 /*function StudentDashboard() {
   return <div>Student Dashboard</div>;
@@ -39,7 +40,7 @@ export default function App() {
           <Route path="/register" element={<Auth />} />
 
           <Route
- path="/teacher/dashboard"
+           path="/teacher/dashboard"
             element={
               <RequireAuth>
                 <RequireRole role="teacher">
@@ -66,6 +67,16 @@ export default function App() {
               <RequireAuth>
                 <RequireRole role="teacher">
                   <CourseDetails />
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+          <Route
+           path="/assignments/:assignmentId/submissions" 
+           element={
+            <RequireAuth>
+                <RequireRole role="teacher">
+                  <Submissions />
                 </RequireRole>
               </RequireAuth>
             }

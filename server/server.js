@@ -9,13 +9,14 @@ const corsOptions = require('./config/corsOptions');
 // Import your middleware modules
 const logger = require('./middleware/logger');
 const errorHandler = require('./middleware/errorHandler');
+const path = require('path');
 
 // Routes
 const authRoutes = require('./routes/authRoutes'); 
 const coursesRoutes = require('./routes/courses');
 const assignmentsRoutes = require('./routes/assignments');
 const enrollmentsRoutes = require('./routes/enrollments');
-
+const submissionsRoutes = require('./routes/submissions');
 
 connectDB();
 
@@ -27,6 +28,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', coursesRoutes);
 app.use('/api/assignments', assignmentsRoutes);
 app.use('/api/enrollments', enrollmentsRoutes);
+app.use('/api/submissions', submissionsRoutes);
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 
 // TODO: Use auth middleware on protected routes, e.g.:

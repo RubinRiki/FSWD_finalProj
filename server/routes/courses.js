@@ -5,8 +5,6 @@ const { requireRole } = require('../middleware/roles');
 const courseController = require('../controllers/courseController');
 
 router.use(auth);
-console.log("In courses route");
-
 router.get('/list', courseController.getCoursesForUserController);
 router.post('/', requireRole('teacher'), courseController.createCourseController);
 router.get('/:id/details', courseController.getCourseDetailsController);
