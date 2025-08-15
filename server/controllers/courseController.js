@@ -24,8 +24,6 @@ async function createCourseController(req, res, next) {
 
 async function getCourseDetailsController(req, res, next) {
   try {
-    console.log("in controller", req.params);
-
     const userId = req.user?.sub || req.user?._id || req.user?.id;
     const role = req.user?.role === 'student' ? 'student' : 'teacher';
     const { id } = req.params;

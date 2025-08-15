@@ -96,8 +96,6 @@ async function createCourse(teacherId, { title, description = '' }) {
   };
 };
 async function getCourseDetails({ userId, role, courseId, withStats = false }) {
-  console.log('Fetching course details for:', { userId, role, courseId, withStats });
-
   const uId = toOid(userId);
   const cId = toOid(courseId);
 

@@ -91,9 +91,22 @@ async function getSubmissionFilePath({ submissionId, requester }) {
   return { absPath, downloadName: filename };
 }
 
+async function countSubmissionsByAssignment(assignmentIds = []) {
+  const ids = (assignmentIds || []).filter(Boolean).map(toOid);
+  if (!ids.length) return {};
+  const rows = await Submission.aggregate([
+    { $match: { assignmentId: { $in: ids } } },
+    { $group: { _id: '$assignmentId', count: { $sum: 1 } } }
+  ]);
+  const map = {};
+  for (const r of rows) map[String(r._id)] = r.count;
+  return map;
+}
+
 module.exports = {
   listSubmissionsForAssignment,
   bulkUpdateSubmissions,
   saveSubmissionFromUpload,
-  getSubmissionFilePath
+  getSubmissionFilePath,
+  countSubmissionsByAssignment
 };
