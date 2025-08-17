@@ -1,13 +1,12 @@
-// src/services/StudentApi.js
 import api from './api';
 
-// קבלת פרטי קורס מסוים
+// Get details of a specific course
 export const getCourseDetails = (courseId) =>
   api
     .get(`/courses/${courseId}/details`, { params: { include: 'stats' } })
     .then((res) => res.data);
 
-// קבלת כל המטלות של הסטודנט בקורס מסוים
+// Get assignments of the student in a specific course
 export const getStudentAssignments = (courseId, params = {}) =>
   api
     .get('/assignments', {
@@ -15,7 +14,7 @@ export const getStudentAssignments = (courseId, params = {}) =>
     })
     .then((res) => res.data);
 
-// קבלת כל ההגשות של הסטודנט במטלה מסוימת
+// Get submissions of the student for a specific assignment
 export const getStudentSubmissions = (assignmentId, params = {}) =>
   api
     .get('/submissions', {
@@ -23,8 +22,8 @@ export const getStudentSubmissions = (assignmentId, params = {}) =>
     })
     .then((res) => res.data);
 
-// קבלת כל הקורסים שהסטודנט רשום אליהם
-export const getEnrolledCourses = (params = {}) =>
+// Get all courses the student is enrolled in (server resolves by role)
+export const getMyCourses = (params = {}) =>
   api
-    .get('/enrollments', { params })
+    .get('/courses/list', { params })
     .then((res) => res.data);

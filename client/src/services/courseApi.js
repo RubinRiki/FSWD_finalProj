@@ -9,6 +9,7 @@ export const getAssignments = (courseId, params = {}) =>
 export const getStudents = (courseId, params = {}) =>
   api.get('/enrollments', { params: { course: courseId, ...params } }).then(r => r.data);
 
+//פונקציות מתחת לא ממומשות עדיין בשרת
 export const updateCourse = (id, payload) =>
   api.patch(`/courses/${id}`, payload).then(r => r.data);
 
