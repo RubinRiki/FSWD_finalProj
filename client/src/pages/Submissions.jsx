@@ -22,9 +22,10 @@ export default function Submissions() {
     setErr('');
     try {
       const res = await getSubmissions(assignmentId);
-      const data = Array.isArray(res?.data) ? res.data : [];
-      const filtered = data.filter(r => typeof r?.fileUrl === 'string' && r.fileUrl.trim() !== '');
-      setRows(filtered);
+      const data =
+        Array.isArray(res?.data) ? res.data :
+        Array.isArray(res) ? res : [];
+      setRows(data);
       setDraft({});
     } catch (e) {
       const msg = e?.response?.data?.error || e?.message || 'Failed to load submissions';
@@ -79,13 +80,22 @@ export default function Submissions() {
     }
   }
 
+  function rowHasFile(r) {
+    return Boolean(
+      (typeof r?.fileUrl === 'string' && r.fileUrl.trim() !== '') ||
+      r?.fileId ||
+      (Array.isArray(r?.files) && r.files.length > 0) ||
+      r?.hasFile
+    );
+  }
+
   function handleView(r) {
-    if (!r?.fileUrl) { toast('No file attached'); return; }
+    if (!rowHasFile(r)) { toast('No file attached'); return; }
     openSubmissionFile(r._id);
   }
 
   function handleDownload(r) {
-    if (!r?.fileUrl) { toast('No file attached'); return; }
+    if (!rowHasFile(r)) { toast('No file attached'); return; }
     downloadSubmissionFile(r._id);
   }
 
@@ -98,7 +108,7 @@ export default function Submissions() {
         <div className="as-title">Submissions</div>
         <div className="as-actions">
           {!editing ? (
-            <button className="as-btn primary" onClick={startEdit} disabled={loading || !!err || rows.length === 0}>Enter grading</button>
+            <button className="as-btn primary" onClick={startEdit} disabled={loading || !!err}>Enter grading</button>
           ) : (
             <>
               <button className="as-btn primary" onClick={saveAll} disabled={pendingUpdates.length === 0}>Save changes</button>
@@ -122,7 +132,7 @@ export default function Submissions() {
           </div>
         )}
         {!loading && !err && rows.length === 0 && (
-          <div className="as-notice empty">No submissions with files yet.</div>
+          <div className="as-notice empty">No submissions yet.</div>
         )}
         {!loading && !err && rows.length > 0 && (
           <>
@@ -136,6 +146,7 @@ export default function Submissions() {
             <ul className="as-list">
               {rows.map(r => {
                 const d = draft[r._id] || {};
+                const hasFile = rowHasFile(r);
                 return (
                   <li key={r._id} className="as-row">
                     <div className="as-cell student">
@@ -171,8 +182,8 @@ export default function Submissions() {
                       )}
                     </div>
                     <div className="as-cell as-col-action">
-                      <button className="as-btn outline" disabled={!r.fileUrl} onClick={() => handleView(r)}>View</button>
-                      <button className="as-btn primary" disabled={!r.fileUrl} onClick={() => handleDownload(r)}>Download</button>
+                      <button className="as-btn outline" disabled={!hasFile} onClick={() => handleView(r)}>View</button>
+                      <button className="as-btn primary" disabled={!hasFile} onClick={() => handleDownload(r)}>Download</button>
                     </div>
                   </li>
                 );
