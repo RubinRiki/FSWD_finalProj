@@ -23,7 +23,8 @@ export default function Submissions() {
     try {
       const res = await getSubmissions(assignmentId);
       const data = Array.isArray(res?.data) ? res.data : [];
-      setRows(data);
+      const filtered = data.filter(r => typeof r?.fileUrl === 'string' && r.fileUrl.trim() !== '');
+      setRows(filtered);
       setDraft({});
     } catch (e) {
       const msg = e?.response?.data?.error || e?.message || 'Failed to load submissions';
@@ -78,6 +79,16 @@ export default function Submissions() {
     }
   }
 
+  function handleView(r) {
+    if (!r?.fileUrl) { toast('No file attached'); return; }
+    openSubmissionFile(r._id);
+  }
+
+  function handleDownload(r) {
+    if (!r?.fileUrl) { toast('No file attached'); return; }
+    downloadSubmissionFile(r._id);
+  }
+
   return (
     <div className="as">
       <div className="as-topbar">
@@ -111,7 +122,7 @@ export default function Submissions() {
           </div>
         )}
         {!loading && !err && rows.length === 0 && (
-          <div className="as-notice empty">No submissions yet.</div>
+          <div className="as-notice empty">No submissions with files yet.</div>
         )}
         {!loading && !err && rows.length > 0 && (
           <>
@@ -160,8 +171,8 @@ export default function Submissions() {
                       )}
                     </div>
                     <div className="as-cell as-col-action">
-                      <button className="as-btn outline" onClick={() => openSubmissionFile(r._id)}>View</button>
-                      <button className="as-btn primary" onClick={() => downloadSubmissionFile(r._id)}>Download</button>
+                      <button className="as-btn outline" disabled={!r.fileUrl} onClick={() => handleView(r)}>View</button>
+                      <button className="as-btn primary" disabled={!r.fileUrl} onClick={() => handleDownload(r)}>Download</button>
                     </div>
                   </li>
                 );
