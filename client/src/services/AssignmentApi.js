@@ -13,22 +13,28 @@ export const getAssignment = (id, params = {}) =>
   api.get(`/assignments/${id}`, { params: { include: 'course,stats', ...params } }).then(r => r.data);
 
 export const getSubmissions = (assignmentId, params = {}) =>
-  api
-    .get('/submissions', { params: { assignment: assignmentId, sort: '-submittedAt', ...params } })
-    .then(r => r.data);
+  api.get('/submissions', {
+    params: { assignment: assignmentId, sort: '-submittedAt', ...params }
+  }).then(r => r.data);
 
 export const bulkUpdateSubmissions = (assignmentId, updates) =>
   api.patch('/submissions/bulk', { assignment: assignmentId, updates }).then(r => r.data);
 
 export const openSubmissionFile = async (id) => {
-  const res = await api.get(`/submissions/${id}/file?disposition=inline`, { responseType: 'blob' });
+  const res = await api.get(`/submissions/${id}/file`, {
+    params: { disposition: 'inline' },
+    responseType: 'blob'
+  });
   const url = URL.createObjectURL(res.data);
-  window.open(url, '_blank', 'noopener');
+  window.open(url, '_blank', 'noopener,noreferrer');
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 };
 
 export const downloadSubmissionFile = async (id) => {
-  const res = await api.get(`/submissions/${id}/file?disposition=attachment`, { responseType: 'blob' });
+  const res = await api.get(`/submissions/${id}/file`, {
+    params: { disposition: 'attachment' },
+    responseType: 'blob'
+  });
   const url = URL.createObjectURL(res.data);
   const a = document.createElement('a');
   a.href = url;

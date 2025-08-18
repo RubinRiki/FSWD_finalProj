@@ -2,13 +2,12 @@ import React, { useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 
-import Login from './pages/Login';
-import Register from './pages/Register';
+
 import Auth from './pages/Auth';
 import TeacherDashboard from './pages/TeacherDashboard';
 import CourseDetails from './pages/CourseDetails';
 import StudentDashboard from './pages/StudentDashboard';
-import Submissions from './pages/Submissions';
+import Assignment from './pages/Assignment';
 
 /*function StudentDashboard() {
   return <div>Student Dashboard</div>;
@@ -72,11 +71,11 @@ export default function App() {
             }
           />
           <Route
-           path="/assignments/:assignmentId/submissions" 
+           path="/assignments/:assignmentId" 
            element={
             <RequireAuth>
                 <RequireRole role="teacher">
-                  <Submissions />
+                  <Assignment />
                 </RequireRole>
               </RequireAuth>
             }

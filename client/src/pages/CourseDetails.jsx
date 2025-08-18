@@ -1,48 +1,13 @@
+// src/pages/CourseDetails.jsx
 import React, { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MdArrowBack, MdAssignment, MdPeople, MdCalendarToday, MdEdit, MdDelete, MdAdd } from 'react-icons/md';
 import { AuthContext } from '../context/AuthContext';
-import { getCourse, getAssignments, getStudents, updateCourse, deleteCourse, createAssignment, updateAssignment, deleteAssignment } from '../services/courseApi';
+import { getCourse, getAssignments, getStudents, updateCourse, deleteCourse } from '../services/courseApi';
+import { createAssignment } from '../services/AssignmentApi';
 import { confirm, success, error as alertError, toast } from '../utils/alerts';
+import { dueInfo } from '../utils/helpers';
 import './CourseDetails.css';
-
-function fmtRel(ms){
-  const abs=Math.abs(ms);
-  const d=Math.floor(abs/(24*60*60*1000));
-  const h=Math.floor((abs%(24*60*60*1000))/(60*60*1000));
-  const m=Math.floor((abs%(60*60*1000))/(60*1000));
-  const parts=[];
-  if(d) parts.push(d+'d');
-  if(h) parts.push(h+'h');
-  if(!d && !h) parts.push(m+'m');
-  return ms>=0 ? 'in '+parts.join(' ') : parts.join(' ')+' ago';
-}
-function dueInfo(raw){
-  if(!raw) return null;
-  const due=new Date(raw);
-  if(Number.isNaN(due.getTime())) return null;
-  const now=Date.now();
-  const diff=due.getTime()-now;
-  const week=7*24*60*60*1000;
-  const status=diff<0?'closed':diff<=week?'soon':'open';
-  const label=status==='closed'?'Closed':status==='soon'?'Due soon':'Open';
-  return {status,label,when:fmtRel(diff),dueText:due.toLocaleString()};
-}
-async function promptCourseEdit(initial){
-  const title=window.prompt('Course title', initial?.title||'');
-  if(title==null) return null;
-  const description=window.prompt('Course description', initial?.description||'');
-  if(description==null) return null;
-  return { title:title.trim(), description:description.trim() };
-}
-async function promptAssignment(initial){
-  const title=window.prompt('Assignment title', initial?.title||'');
-  if(title==null) return null;
-  const dueRaw=window.prompt('Due date (YYYY-MM-DDTHH:mm, optional)', initial?.dueDate?new Date(initial.dueDate).toISOString().slice(0,16):'');
-  const payload={ title:title.trim() };
-  if(dueRaw && dueRaw.trim()) payload.dueDate=new Date(dueRaw).toISOString();
-  return payload;
-}
 
 export default function CourseDetails() {
   const { courseId } = useParams();
@@ -53,7 +18,6 @@ export default function CourseDetails() {
   const [course, setCourse] = useState(null);
   const [loadingCourse, setLoadingCourse] = useState(true);
   const [courseErr, setCourseErr] = useState('');
-
   const [tab, setTab] = useState('assignments');
 
   const [assignments, setAssignments] = useState([]);
@@ -69,22 +33,15 @@ export default function CourseDetails() {
   useEffect(() => {
     loadCourse();
     setTab('assignments');
-    setAssignments([]); setALoaded(false); setAErr(''); setALoading(false);
-    setStudents([]); setSLoaded(false); setSErr(''); setSLoading(false);
+    setAssignments([]); setALoaded(false); setAErr('');
+    setStudents([]); setSLoaded(false); setSErr('');
   }, [courseId]);
 
   async function loadCourse() {
-    setLoadingCourse(true);
-    setCourseErr('');
-    try {
-      const res = await getCourse(courseId);
-      setCourse(res?.data || null);
-    } catch (e) {
-      const msg = e?.response?.data?.error || e?.message || 'Failed to load course';
-      setCourseErr(msg);
-    } finally {
-      setLoadingCourse(false);
-    }
+    setLoadingCourse(true); setCourseErr('');
+    try { const res = await getCourse(courseId); setCourse(res?.data || null); }
+    catch (e) { setCourseErr(e?.response?.data?.error || e?.message || 'Failed to load course'); }
+    finally { setLoadingCourse(false); }
   }
 
   useEffect(() => {
@@ -95,12 +52,12 @@ export default function CourseDetails() {
   async function loadAssignments() {
     setALoading(true); setAErr('');
     try {
-      const res = await getAssignments(courseId);
+      const res = await getAssignments(courseId, { fields: '_id,title,dueDate,submitted' });
       setAssignments(Array.isArray(res?.data) ? res.data : []);
       setALoaded(true);
     } catch (e) {
-      const msg = e?.response?.data?.error || e?.message || 'Failed to load assignments';
-      setAErr(msg); setALoaded(true);
+      setAErr(e?.response?.data?.error || e?.message || 'Failed to load assignments');
+      setALoaded(true);
     } finally {
       setALoading(false);
     }
@@ -108,79 +65,34 @@ export default function CourseDetails() {
 
   async function loadStudents() {
     setSLoading(true); setSErr('');
-    try {
-      const res = await getStudents(courseId);
-      setStudents(Array.isArray(res?.data) ? res.data : []);
-      setSLoaded(true);
-    } catch (e) {
-      const msg = e?.response?.data?.error || e?.message || 'Failed to load students';
-      setSErr(msg); setSLoaded(true);
-    } finally {
-      setSLoading(false);
-    }
+    try { const res = await getStudents(courseId); setStudents(Array.isArray(res?.data) ? res.data : []); setSLoaded(true); }
+    catch (e) { setSErr(e?.response?.data?.error || e?.message || 'Failed to load students'); setSLoaded(true); }
+    finally { setSLoading(false); }
   }
 
   const canViewStudents = !!course?.permissions?.canViewStudents;
 
-  async function onEditCourse(){
-    const values=await promptCourseEdit({ title:course?.title||'', description:course?.description||'' });
-    if(!values) return;
-    try{
-      await updateCourse(courseId, values);
-      await loadCourse();
-      success('Course updated');
-    }catch(e){
-      const msg=e?.response?.data?.error||e?.message||'Update failed';
-      alertError('Action failed', msg);
-    }
+  async function onEditCourse() {
+    const { promptCourseEdit } = await import('../utils/helpers');
+    const values = await promptCourseEdit({ title: course?.title || '', description: course?.description || '' });
+    if (!values) return;
+    try { await updateCourse(courseId, values); await loadCourse(); success('Course updated'); }
+    catch (e) { alertError('Action failed', e?.response?.data?.error || e?.message || 'Update failed'); }
   }
-  async function onDeleteCourse(){
-    const ok=await confirm({ title:'Delete course?', text:'This action may be restricted by server rules.' });
-    if(!ok.isConfirmed) return;
-    try{
-      await deleteCourse(courseId);
-      toast({ icon:'success', title:'Course deleted' });
-      navigate(-1);
-    }catch(e){
-      const msg=e?.response?.data?.error||e?.message||'Delete failed';
-      alertError('Delete failed', msg);
-    }
+
+  async function onDeleteCourse() {
+    const ok = await confirm({ title: 'Delete course?', text: 'This action may be restricted by server rules.' });
+    if (!ok.isConfirmed) return;
+    try { await deleteCourse(courseId); toast({ icon: 'success', title: 'Course deleted' }); navigate(-1); }
+    catch (e) { alertError('Delete failed', e?.response?.data?.error || e?.message || 'Delete failed'); }
   }
-  async function onNewAssignment(){
-    const payload=await promptAssignment();
-    if(!payload) return;
-    try{
-      await createAssignment(courseId, payload);
-      await loadAssignments();
-      success('Assignment created');
-    }catch(e){
-      const msg=e?.response?.data?.error||e?.message||'Create failed';
-      alertError('Action failed', msg);
-    }
-  }
-  async function onEditAssignment(a){
-    const payload=await promptAssignment(a);
-    if(!payload) return;
-    try{
-      await updateAssignment(a._id, payload);
-      await loadAssignments();
-      success('Assignment updated');
-    }catch(e){
-      const msg=e?.response?.data?.error||e?.message||'Update failed';
-      alertError('Action failed', msg);
-    }
-  }
-  async function onDeleteAssignment(a){
-    const ok=await confirm({ title:'Delete assignment?', text:'This may be blocked if submissions exist.' });
-    if(!ok.isConfirmed) return;
-    try{
-      await deleteAssignment(a._id);
-      await loadAssignments();
-      toast({ icon:'success', title:'Assignment deleted' });
-    }catch(e){
-      const msg=e?.response?.data?.error||e?.message||'Delete failed';
-      alertError('Delete failed', msg);
-    }
+
+  async function onNewAssignment() {
+    const { promptAssignment } = await import('../utils/helpers');
+    const payload = await promptAssignment();
+    if (!payload) return;
+    try { await createAssignment(courseId, payload); await loadAssignments(); success('Assignment created'); }
+    catch (e) { alertError('Action failed', e?.response?.data?.error || e?.message || 'Create failed'); }
   }
 
   return (
@@ -253,13 +165,12 @@ export default function CourseDetails() {
                           <span className="cd-chip">{a.submitted ?? 0} submissions</span>
                         </div>
                         <div className="cd-row-actions">
-                          {isTeacher && (
-                            <>
-                              <button className="cd-btn ghost slim" onClick={() => onEditAssignment(a)}><MdEdit size={14}/>Edit</button>
-                              <button className="cd-btn ghost danger slim" onClick={() => onDeleteAssignment(a)}><MdDelete size={14}/>Delete</button>
-                            </>
-                          )}
-                          <button className="cd-btn primary slim" onClick={() => navigate(`/assignments/${a._id}/submissions`)}>View submissions</button>
+                          <button
+                            className="cd-btn primary slim"
+                            onClick={() => navigate(`/assignments/${a._id}`, { state: { assignment: a, course: { _id: courseId, title: course?.title } } })}
+                          >
+                            View
+                          </button>
                         </div>
                       </li>
                     );
