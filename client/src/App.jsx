@@ -64,9 +64,7 @@ export default function App() {
             path="/courses/:courseId"
             element={
               <RequireAuth>
-                <RequireRole role="teacher">
                   <CourseDetails />
-                </RequireRole>
               </RequireAuth>
             }
           />

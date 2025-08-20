@@ -27,6 +27,20 @@ export const openSubmissionFile = async (id) => {
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 };
 
+export const createSubmission = (assignmentId, studentId, file) => {
+  const formData = new FormData();
+  formData.append("assignmentId", assignmentId);
+  formData.append("studentId", studentId);
+  formData.append("file", file);
+
+  return api
+    .post("/submissions", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    })
+    .then((r) => r.data);
+};
+
+
 export const downloadSubmissionFile = async (id) => {
   const res = await api.get(`/submissions/${id}/file?disposition=attachment`, { responseType: 'blob' });
   const url = URL.createObjectURL(res.data);
