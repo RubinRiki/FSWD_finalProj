@@ -72,9 +72,7 @@ export default function App() {
            path="/assignments/:assignmentId" 
            element={
             <RequireAuth>
-                <RequireRole role="teacher">
                   <Assignment />
-                </RequireRole>
               </RequireAuth>
             }
           />
