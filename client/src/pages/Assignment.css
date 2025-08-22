@@ -75,20 +75,7 @@
   gap: 8px;
 }
 
-.as-iconbtn{
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  border: 1px solid var(--as-border);
-  background: #fff;
-  color: var(--as-text);
-  box-shadow: var(--as-shadow-sm);
-}
-.as-iconbtn:hover{ filter: brightness(0.98); }
-.as-iconbtn.danger{ color: #b91c1c; border-color: #fecaca; background: #fff5f5; }
+
 
 .as-assignment-title{
   font-weight: 800;
@@ -114,3 +101,30 @@
 .as-cta-group{ display:flex; gap:8px; }
 
 .as-btn.sm{ height:36px; padding:0 14px; font-size:.9rem; border-radius:10px; }
+/* Append to src/pages/Assignment.css */
+/* Balanced with teacher page */
+.as-h3 { margin: 4px 0 10px; font-weight: 800; }
+.as-col-submitted { min-width: 180px; }
+.as-upload { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.as-btn.danger { background: #ffe7e7; color: #b42318; border: 1px solid #ffd5d5; }
+.as-notice.warn { background: #fff7e6; color: #8a5300; border: 1px solid #ffe1b3; }
+
+/* A11y: text for screen-readers only */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* One canonical icon button rule */
+.as-actions{display:flex;gap:8px;flex-wrap:wrap}
+.as-iconbtn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:36px;height:36px;border-radius:10px;
+  background:#fff;border:1px solid var(--as-border);
+  color:#222;cursor:pointer;transition:all .15s ease-in-out
+}
+.as-iconbtn:hover{border-color:#d8d8d8;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.as-iconbtn:focus-visible{outline:none;box-shadow:var(--focus)}
+.as-iconbtn.danger{background:#fff7f7;border-color:#ffdede;color:#b42318}
+
+/* Force SVG paint (beats global resets) */
+.as-iconbtn svg,
+.as-iconbtn svg *{fill:currentColor !important;stroke:currentColor !important}
+.as-iconbtn svg{width:18px;height:18px;display:block}

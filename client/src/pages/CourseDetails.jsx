@@ -1,13 +1,53 @@
-// src/pages/CourseDetails.jsx
 import React, { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MdArrowBack, MdAssignment, MdPeople, MdCalendarToday, MdEdit, MdDelete, MdAdd } from 'react-icons/md';
+
 import { AuthContext } from '../context/AuthContext';
 import { getCourse, getAssignments, getStudents, updateCourse, deleteCourse } from '../services/courseApi';
 import { createAssignment } from '../services/AssignmentApi';
+
 import { confirm, success, error as alertError, toast } from '../utils/alerts';
 import { dueInfo } from '../utils/helpers';
 import './CourseDetails.css';
+
+
+// Generic resource loader hook
+function useResource(loader) {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState('');
+
+  const reload = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await loader();
+      const next = Array.isArray(res?.data) ? res.data : (res?.data ?? []);
+      setData(next);
+      setLoaded(true);
+    } catch (e) {
+      setError(e?.response?.data?.error || e?.message || 'Failed to load');
+      setLoaded(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const reset = () => {
+    setData([]); setLoading(false); setLoaded(false); setError('');
+  };
+
+  return { data, loading, loaded, error, reload, reset, setData };
+}
+
+// Reusable data panel
+function DataPanel({ state, emptyText, onRetry, children }) {
+  if (state.loading) return <PanelLoading text="Loading…" compact />;
+  if (state.error)   return <PanelError text={state.error} onRetry={onRetry} />;
+  if (!state.data?.length) return <EmptyState text={emptyText} />;
+  return children;
+}
 
 export default function CourseDetails() {
   const { courseId } = useParams();
@@ -20,79 +60,79 @@ export default function CourseDetails() {
   const [courseErr, setCourseErr] = useState('');
   const [tab, setTab] = useState('assignments');
 
-  const [assignments, setAssignments] = useState([]);
-  const [aLoaded, setALoaded] = useState(false);
-  const [aLoading, setALoading] = useState(false);
-  const [aErr, setAErr] = useState('');
-
-  const [students, setStudents] = useState([]);
-  const [sLoaded, setSLoaded] = useState(false);
-  const [sLoading, setSLoading] = useState(false);
-  const [sErr, setSErr] = useState('');
+  const asg = useResource(() => getAssignments(courseId));
+  const std = useResource(() => getStudents(courseId));
 
   useEffect(() => {
+    const resetPanels = () => {
+      setTab('assignments');
+      asg.reset();
+      std.reset();
+    };
     loadCourse();
-    setTab('assignments');
-    setAssignments([]); setALoaded(false); setAErr('');
-    setStudents([]); setSLoaded(false); setSErr('');
+    resetPanels();
   }, [courseId]);
 
   async function loadCourse() {
     setLoadingCourse(true); setCourseErr('');
-    try { const res = await getCourse(courseId); setCourse(res?.data || null); }
-    catch (e) { setCourseErr(e?.response?.data?.error || e?.message || 'Failed to load course'); }
-    finally { setLoadingCourse(false); }
-  }
-
-  useEffect(() => {
-    if (tab === 'assignments' && !aLoaded) loadAssignments();
-    if (tab === 'students' && !sLoaded) loadStudents();
-  }, [tab]);
-
-  async function loadAssignments() {
-    setALoading(true); setAErr('');
     try {
-      const res = await getAssignments(courseId, { fields: '_id,title,dueDate,submitted' });
-      setAssignments(Array.isArray(res?.data) ? res.data : []);
-      setALoaded(true);
+      const res = await getCourse(courseId);
+      setCourse(res?.data || null);
     } catch (e) {
-      setAErr(e?.response?.data?.error || e?.message || 'Failed to load assignments');
-      setALoaded(true);
+      setCourseErr(e?.response?.data?.error || e?.message || 'Failed to load course');
     } finally {
-      setALoading(false);
+      setLoadingCourse(false);
     }
   }
 
-  async function loadStudents() {
-    setSLoading(true); setSErr('');
-    try { const res = await getStudents(courseId); setStudents(Array.isArray(res?.data) ? res.data : []); setSLoaded(true); }
-    catch (e) { setSErr(e?.response?.data?.error || e?.message || 'Failed to load students'); setSLoaded(true); }
-    finally { setSLoading(false); }
-  }
-
   const canViewStudents = !!course?.permissions?.canViewStudents;
+  const canSeeStudentsTab = isTeacher && canViewStudents;
+
+  useEffect(() => {
+    if (tab === 'students' && !canSeeStudentsTab) setTab('assignments');
+  }, [tab, canSeeStudentsTab]);
+
+  useEffect(() => {
+    if (tab === 'assignments' && !asg.loaded && !asg.loading) asg.reload();
+    if (tab === 'students' && canSeeStudentsTab && !std.loaded && !std.loading) std.reload();
+  }, [tab, canSeeStudentsTab]);
 
   async function onEditCourse() {
     const { promptCourseEdit } = await import('../utils/helpers');
     const values = await promptCourseEdit({ title: course?.title || '', description: course?.description || '' });
     if (!values) return;
-    try { await updateCourse(courseId, values); await loadCourse(); success('Course updated'); }
-    catch (e) { alertError('Action failed', e?.response?.data?.error || e?.message || 'Update failed'); }
+    try {
+      await updateCourse(courseId, values);
+      await loadCourse();
+      success('Course updated');
+    } catch (e) {
+      alertError('Action failed', e?.response?.data?.error || e?.message || 'Update failed');
+    }
   }
 
   async function onDeleteCourse() {
     const ok = await confirm({ title: 'Delete course?', text: 'This action may be restricted by server rules.' });
     if (!ok.isConfirmed) return;
-    try { await deleteCourse(courseId); toast({ icon: 'success', title: 'Course deleted' }); navigate(-1); }
-    catch (e) { alertError('Delete failed', e?.response?.data?.error || e?.message || 'Delete failed'); }
+    try {
+      await deleteCourse(courseId);
+      toast({ icon: 'success', title: 'Course deleted' });
+      navigate(-1);
+    } catch (e) {
+      alertError('Delete failed', e?.response?.data?.error || e?.message || 'Delete failed');
+    }
   }
 
   async function onNewAssignment() {
     const { promptAssignment } = await import('../utils/helpers');
     const payload = await promptAssignment();
     if (!payload) return;
-    try { await createAssignment(courseId, payload); await loadAssignments(); success('Assignment created'); }
-    catch (e) { alertError('Action failed', e?.response?.data?.error || e?.message || 'Create failed'); }
+    try {
+      await createAssignment(courseId, payload);
+      await asg.reload();
+      success('Assignment created');
+    } catch (e) {
+      alertError('Action failed', e?.response?.data?.error || e?.message || 'Create failed');
+    }
   }
 
   return (
@@ -134,83 +174,77 @@ export default function CourseDetails() {
 
       <nav className="cd-tabs" role="tablist" aria-label="Course tabs">
         <TabButton active={tab === 'assignments'} onClick={() => setTab('assignments')} label="ASSIGNMENTS" />
-        <TabButton active={tab === 'students'} onClick={() => setTab('students')} label="STUDENTS" disabled={!isTeacher || !canViewStudents} title={!isTeacher ? 'Teacher only' : undefined} />
+        {canSeeStudentsTab && (
+          <TabButton active={tab === 'students'} onClick={() => setTab('students')} label="STUDENTS" />
+        )}
       </nav>
 
       <div className="cd-panel">
         {courseErr && !loadingCourse && <PanelError text={courseErr} onRetry={loadCourse} />}
 
         {tab === 'assignments' && (
-          <>
-            {aLoading && <PanelLoading text="Loading assignments…" compact />}
-            {!aLoading && aErr && <PanelError text={aErr} onRetry={loadAssignments} />}
-            {!aLoading && !aErr && (
-              assignments.length === 0 ? (
-                <EmptyState text="No assignments yet." />
-              ) : (
-                <ul className="cd-list">
-                  {assignments.map(a => {
-                    const due = dueInfo(a.dueDate);
-                    return (
-                      <li key={a._id} className="cd-row assignment">
-                        <div className="cd-row-main">
-                          <div className="cd-row-title">{a.title}</div>
-                          <div className="cd-row-sub">
-                            {a.dueDate ? `Due: ${new Date(a.dueDate).toLocaleString()}` : 'No due date'}
-                            {due && <span className={`cd-badge ${due.status}`}>{due.label}</span>}
-                            {due && <span className="cd-due-when">{due.when}</span>}
-                          </div>
-                        </div>
-                        <div className="cd-row-meta">
-                          <span className="cd-chip">{a.submitted ?? 0} submissions</span>
-                        </div>
-                        <div className="cd-row-actions">
-                          <button
-                            className="cd-btn primary slim"
-                            onClick={() => navigate(`/assignments/${a._id}`, { state: { assignment: a, course: { _id: courseId, title: course?.title } } })}
-                          >
-                            View
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )
-            )}
-          </>
+          <DataPanel state={asg} emptyText="No assignments yet." onRetry={asg.reload}>
+            <ul className="cd-list">
+              {asg.data.map(a => {
+                const due = dueInfo(a.dueDate);
+                const to = isTeacher ? `/assignments/${a._id}` : `/assignments/${a._id}/me`;
+                return (
+                  <li key={a._id} className="cd-row assignment">
+                    <div className="cd-row-main">
+                      <div className="cd-row-title">{a.title}</div>
+                      <div className="cd-row-sub">
+                        {a.dueDate ? `Due: ${new Date(a.dueDate).toLocaleString()}` : 'No due date'}
+                        {due && <span className={`cd-badge ${due.status}`}>{due.label}</span>}
+                        {due && <span className="cd-due-when">{due.when}</span>}
+                      </div>
+                    </div>
+                    <div className="cd-row-meta">
+                      {isTeacher && typeof a.submitted === 'number' && (
+                        <span className="cd-chip">{a.submitted} submissions</span>
+                      )}
+                    </div>
+                    <div className="cd-row-actions">
+                      <button
+                        className="cd-btn primary slim"
+                        onClick={() =>
+                          navigate(to, {
+                            state: { assignment: a, course: { _id: courseId, title: course?.title } }
+                          })
+                        }
+                      >
+                        View
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </DataPanel>
         )}
 
-        {tab === 'students' && (
-          <>
-            {sLoading && <PanelLoading text="Loading students…" compact />}
-            {!sLoading && sErr && <PanelError text={sErr} onRetry={loadStudents} />}
-            {!sLoading && !sErr && (
-              students.length === 0 ? (
-                <EmptyState text="No students yet." />
-              ) : (
-                <ul className="cd-list">
-                  {students.map(e => (
-                    <li key={e._id} className="cd-row student">
-                      <div className="cd-row-main">
-                        <div className="cd-row-title">{e.student?.name || 'Student'}</div>
-                      </div>
-                      <div className="cd-col-email">{e.student?.email || '-'}</div>
-                      <div className="cd-row-meta">
-                        <span className="cd-chip">Enrolled</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )
-            )}
-          </>
+        {tab === 'students' && canSeeStudentsTab && (
+          <DataPanel state={std} emptyText="No students yet." onRetry={std.reload}>
+            <ul className="cd-list">
+              {std.data.map(e => (
+                <li key={e._id} className="cd-row student">
+                  <div className="cd-row-main">
+                    <div className="cd-row-title">{e.student?.name || 'Student'}</div>
+                  </div>
+                  <div className="cd-col-email">{e.student?.email || '-'}</div>
+                  <div className="cd-row-meta">
+                    <span className="cd-chip">Enrolled</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </DataPanel>
         )}
       </div>
     </div>
   );
 }
 
+// Small UI building blocks
 function Stat({ label, value, icon, tone = 'purple' }) {
   return (
     <div className={`cd-card ${tone}`}>
@@ -225,7 +259,14 @@ function Stat({ label, value, icon, tone = 'purple' }) {
 
 function TabButton({ active, onClick, label, disabled, title }) {
   return (
-    <button className={`cd-tab ${active ? 'active' : ''}`} onClick={onClick} disabled={disabled} title={title} role="tab" aria-selected={active}>
+    <button
+      className={`cd-tab ${active ? 'active' : ''}`}
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      role="tab"
+      aria-selected={active}
+    >
       {label}
     </button>
   );

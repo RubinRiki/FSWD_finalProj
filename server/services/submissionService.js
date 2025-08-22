@@ -1,29 +1,79 @@
-const mongoose = require('mongoose');
+// services/submissionService.js
+const mongoose   = require('mongoose');
+const fs         = require('fs');
+const path       = require('path');
+
 const Submission = require('../models/Submission');
-const fs = require('fs');
-const path = require('path');
+const Assignment = require('../models/Assignment');
+const Course     = require('../models/Course');
+
 const { SUBMISSIONS_DIR, PUBLIC_BASE } = require('../config/storage');
 
-
-const toOid = v => (mongoose.Types.ObjectId.isValid(v) ? new mongoose.Types.ObjectId(v) : v);
+const toOid = (v) => (mongoose.Types.ObjectId.isValid(v) ? new mongoose.Types.ObjectId(v) : v);
 
 function parseSort(s = '-submittedAt') {
   const out = {};
   String(s || '').split(',').forEach(tok => {
-    if (!tok) return;
-    const key = tok.replace(/^-/, '');
+    tok = tok.trim(); if (!tok) return;
     const dir = tok.startsWith('-') ? -1 : 1;
+    const key = tok.replace(/^-/, '');
     if (key) out[key] = dir;
   });
   return Object.keys(out).length ? out : { submittedAt: -1 };
 }
 
-async function listSubmissionsForAssignment({ assignment, sort = '-submittedAt', page = 1, limit = 50 }) {
+// Build public URL for a stored key
+const publicUrlFor = (key) => {
+  if (!key) return '';
+  const base = String(PUBLIC_BASE || '').replace(/\/+$/,'');
+  return `${base}/uploads/${key}`.replace(/\/{2,}/g, '/');
+};
+
+// Robust filename extraction from URL (cross-platform)
+function nameFromUrl(u) {
+  try {
+    const p = new URL(String(u)).pathname;
+    return decodeURIComponent(p.split('/').pop() || '');
+  } catch {
+    const s = String(u || '');
+    const i = s.lastIndexOf('/');
+    return i >= 0 ? s.slice(i + 1) : s;
+  }
+}
+
+// Ensure teacher owns the course of the assignment
+async function ensureTeacherOwnsAssignment(teacherId, assignmentId) {
+  const asg = await Assignment.findById(toOid(assignmentId)).select('courseId').lean();
+  if (!asg) throw Object.assign(new Error('Assignment not found'), { status: 404 });
+  const crs = await Course.findById(asg.courseId).select('createdBy').lean();
+  if (!crs || String(crs.createdBy) !== String(teacherId)) {
+    throw Object.assign(new Error('Forbidden'), { status: 403 });
+  }
+  return asg;
+}
+
+/**
+ * List submissions for a single assignment, scoped by role.
+ * Teacher (owner) -> all, Student -> only his own.
+ */
+async function listSubmissionsForAssignment({ assignment, sort = '-submittedAt', page = 1, limit = 50, requester }) {
   if (!assignment) throw new Error('assignment is required');
   const assignmentId = toOid(assignment);
   const p = Math.max(parseInt(page) || 1, 1);
   const l = Math.min(Math.max(parseInt(limit) || 50, 1), 100);
+
+  const role   = requester?.role;
+  const userId = String(requester?.userId || '');
+
   const match = { assignmentId };
+  if (role === 'teacher') {
+    await ensureTeacherOwnsAssignment(userId, assignmentId);
+  } else if (role === 'student') {
+    match.studentId = toOid(userId);
+  } else {
+    const err = new Error('Forbidden'); err.status = 403; throw err;
+  }
+
   const [items, total] = await Promise.all([
     Submission.aggregate([
       { $match: match },
@@ -39,58 +89,141 @@ async function listSubmissionsForAssignment({ assignment, sort = '-submittedAt',
           submittedAt: 1,
           grade: 1,
           note: 1,
-          student: { id: '$student._id', name: '$student.name', email: '$student.email' }
+          fileUrl: 1,
+          fileName: 1,
+          fileKey: 1,
+          student: { _id: '$student._id', name: '$student.name', email: '$student.email' }
       } }
     ]),
     Submission.countDocuments(match)
   ]);
-  return { items, total, page: p, limit: l };
+
+  // Backfill for legacy rows
+  const normalized = items.map(r => {
+    const url = r.fileUrl || publicUrlFor(r.fileKey || '');
+    const name = r.fileName || (url ? nameFromUrl(url) : 'SUBMISSION');
+    return { ...r, fileUrl: url, fileName: name };
+  });
+
+  return { items: normalized, total, page: p, limit: l };
 }
 
-async function bulkUpdateSubmissions({ assignment, updates = [] }) {
+/**
+ * Bulk grade update (teacher only). Ownership enforced here.
+ */
+async function bulkUpdateSubmissions({ assignment, updates = [], requester }) {
   if (!assignment) throw new Error('assignment is required');
   if (!Array.isArray(updates) || updates.length === 0) return { updated: 0 };
-  const assignmentId = toOid(assignment);
 
-  const ops = updates.map(u => {
-    if (!u || !u._id) return null;
-    const _id = toOid(u._id);
+  await ensureTeacherOwnsAssignment(requester?.userId, assignment);
+
+  const ops = [];
+  for (const u of updates) {
+    if (!u || !u._id) continue;
     const $set = {};
-    if (Object.prototype.hasOwnProperty.call(u, 'grade')) $set.grade = u.grade;
-    if (Object.prototype.hasOwnProperty.call(u, 'note'))  $set.note  = u.note ?? '';
-    if (!Object.keys($set).length) return null;
-    return { updateOne: { filter: { _id, assignmentId }, update: { $set } } };
-  }).filter(Boolean);
-
+    if (Object.prototype.hasOwnProperty.call(u, 'grade')) $set.grade = u.grade === null ? null : Number(u.grade);
+    if (Object.prototype.hasOwnProperty.call(u, 'note'))  $set.note  = String(u.note || '');
+    if (!Object.keys($set).length) continue;
+    ops.push({
+      updateOne: {
+        filter: { _id: toOid(u._id), assignmentId: toOid(assignment) },
+        update: { $set }
+      }
+    });
+  }
   if (!ops.length) return { updated: 0 };
-
   const res = await Submission.bulkWrite(ops, { ordered: false });
-  const updated = res.modifiedCount ?? res.nModified ?? 0;
-  return { updated };
+  return { updated: (res.modifiedCount || 0) + (res.upsertedCount || 0) };
 }
 
-async function saveSubmissionFromUpload({ studentId, assignmentId, savedFilename, note = '' }) {
-  const fileUrl = `${PUBLIC_BASE}/${savedFilename}`;
-  const doc = await Submission.findOneAndUpdate(
-    { assignmentId: toOid(assignmentId), studentId: toOid(studentId) },
-    { fileUrl, submittedAt: new Date(), note },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
-  ).lean();
-  return doc;
+/**
+ * Save uploaded submission (student). Creates a new row for each upload.
+ */
+async function saveSubmissionFromUpload({ studentId, assignmentId, savedFilename, originalName, note = '' }) {
+  const asg = await Assignment.findById(toOid(assignmentId)).select('_id').lean();
+  if (!asg) { const e = new Error('Assignment not found'); e.status = 404; throw e; }
+
+  const payload = {
+    assignmentId: toOid(assignmentId),
+    studentId: toOid(studentId),
+    submittedAt: new Date(),
+    note: String(note || ''),
+    fileKey: savedFilename,
+    fileUrl: publicUrlFor(savedFilename),
+    fileName: (originalName || savedFilename || 'SUBMISSION')
+  };
+
+  const doc = await Submission.create(payload);
+
+  return {
+    _id: doc._id,
+    assignmentId: doc.assignmentId,
+    studentId: doc.studentId,
+    submittedAt: doc.submittedAt,
+    grade: doc.grade,
+    note: doc.note,
+    fileUrl: doc.fileUrl,
+    fileName: doc.fileName
+  };
 }
 
+/**
+ * Get absolute file path for serving (owner student or teacher-owner).
+ */
 async function getSubmissionFilePath({ submissionId, requester }) {
-  const sub = await Submission.findById(toOid(submissionId)).lean();
-  if (!sub) throw Object.assign(new Error('Not found'), { status: 404 });
-  const isTeacher = requester?.role === 'teacher';
-  const isOwner = String(sub.studentId) === String(requester?._id || requester?.id);
-  if (!isTeacher && !isOwner) throw Object.assign(new Error('Forbidden'), { status: 403 });
-  const filename = path.basename(String(sub.fileUrl || ''));
-  const absPath = path.join(SUBMISSIONS_DIR, filename);
-  if (!fs.existsSync(absPath)) throw Object.assign(new Error('File not found'), { status: 404 });
-  return { absPath, downloadName: filename };
+  const sub = await Submission.findById(toOid(submissionId)).select('studentId assignmentId fileKey fileUrl fileName').lean();
+  if (!sub) { const e = new Error('Not found'); e.status = 404; throw e; }
+
+  const userId = String(requester?.userId || '');
+  const role   = requester?.role;
+
+  if (role === 'student') {
+    if (String(sub.studentId) !== userId) { const e = new Error('Forbidden'); e.status = 403; throw e; }
+  } else if (role === 'teacher') {
+    await ensureTeacherOwnsAssignment(userId, sub.assignmentId);
+  } else {
+    const e = new Error('Forbidden'); e.status = 403; throw e;
+  }
+
+  const key = sub.fileKey || nameFromUrl(sub.fileUrl || '');
+  const absPath = path.join(SUBMISSIONS_DIR, key);
+  if (!key || !fs.existsSync(absPath)) { const e = new Error('File not found'); e.status = 404; throw e; }
+
+  const downloadName = sub.fileName || nameFromUrl(sub.fileUrl || key) || 'submission';
+  return { absPath, downloadName };
 }
 
+/**
+ * Delete a submission (owner student or teacher-owner). Also deletes file.
+ */
+async function deleteSubmission({ id, requester }) {
+  const sub = await Submission.findById(toOid(id)).select('studentId assignmentId fileKey fileUrl').lean();
+  if (!sub) { const e = new Error('Not found'); e.status = 404; throw e; }
+
+  const userId = String(requester?.userId || '');
+  const role   = requester?.role;
+
+  if (role === 'student') {
+    if (String(sub.studentId) !== userId) { const e = new Error('Forbidden'); e.status = 403; throw e; }
+  } else if (role === 'teacher') {
+    await ensureTeacherOwnsAssignment(userId, sub.assignmentId);
+  } else {
+    const e = new Error('Forbidden'); e.status = 403; throw e;
+  }
+
+  await Submission.deleteOne({ _id: sub._id });
+
+  const key = sub.fileKey || nameFromUrl(sub.fileUrl || '');
+  if (key) {
+    const fp = path.join(SUBMISSIONS_DIR, key);
+    fs.promises.unlink(fp).catch(() => void 0); // ignore if missing
+  }
+  return true;
+}
+
+/**
+ * Aggregate counts per assignment (used by assignmentService).
+ */
 async function countSubmissionsByAssignment(assignmentIds = []) {
   const ids = (assignmentIds || []).filter(Boolean).map(toOid);
   if (!ids.length) return {};
@@ -108,5 +241,6 @@ module.exports = {
   bulkUpdateSubmissions,
   saveSubmissionFromUpload,
   getSubmissionFilePath,
+  deleteSubmission,                 
   countSubmissionsByAssignment
 };

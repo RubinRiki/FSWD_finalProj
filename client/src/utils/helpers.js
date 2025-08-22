@@ -1,5 +1,8 @@
-import { confirm ,formPrompt } from './alerts';
+// utils/helpers.js
+// Shared, role-agnostic helpers (no data loading here)
 
+import { confirm, formPrompt, toast } from './alerts';
+import { openSubmissionFile, downloadSubmissionFile } from '../services/AssignmentApi';
 
 /* ---------- Time helpers ---------- */
 
@@ -47,7 +50,7 @@ export function fileUrlFromRow(r) {
 }
 
 /**
- * Choose how to open a submission file:
+ * Decide how to fetch a submission file:
  * - If URL exists -> { type:'url', value:<url> }
  * - Else if row has _id -> { type:'id', value:<_id> } (use API open/download)
  * - Else -> null
@@ -57,6 +60,25 @@ export function getRowFileTarget(r) {
   if (url) return { type: 'url', value: url };
   if (r?._id) return { type: 'id', value: r._id };
   return null;
+}
+
+export function viewFile(row) {
+  const target = getRowFileTarget(row);
+  if (!target) { toast('No file attached'); return; }
+  if (target.type === 'url') window.open(target.value, '_blank', 'noopener,noreferrer');
+  else openSubmissionFile(target.value);
+}
+
+export function downloadFile(row) {
+  const target = getRowFileTarget(row);
+  if (!target) { toast('No file attached'); return; }
+  if (target.type === 'url') {
+    const a = document.createElement('a');
+    a.href = target.value; a.target = '_blank'; a.rel = 'noopener';
+    a.click();
+  } else {
+    downloadSubmissionFile(target.value);
+  }
 }
 
 /* ---------- SweetAlert forms (course/assignment) ---------- */
@@ -90,6 +112,7 @@ export async function promptCourseEdit(initial = {}) {
   return res?.isConfirmed ? res.value : null;
 }
 
+/** Form-driven modal for new/edit assignment (uses alerts.formPrompt). */
 export async function promptAssignment(initial = {}) {
   const values = await formPrompt({
     title: initial?._id ? 'Edit assignment' : 'New assignment',

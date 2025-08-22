@@ -3,12 +3,17 @@ const router = express.Router();
 
 const requireAuth = require('../middleware/authMiddleware');
 const { requireRole } = require('../middleware/roles');
-const controller = require('../controllers/assignmentController');
+const ctrl = require('../controllers/assignmentController');
 
-router.get('/', requireAuth, requireRole('teacher'), controller.getAssignmentsController);
-router.get('/:id', requireAuth, requireRole('teacher'), controller.getAssignmentByIdController);
-router.post('/', requireAuth, requireRole('teacher'), controller.createAssignmentController);
-router.patch('/:id', requireAuth, requireRole('teacher'), controller.updateAssignmentController);
-router.delete('/:id', requireAuth, requireRole('teacher'), controller.deleteAssignmentController);
+router.use(requireAuth);
+
+// list by course, get single
+router.get('/',     ctrl.listAssignments);
+router.get('/:id',  ctrl.getAssignment);
+
+// create/update/delete (teacher-owner enforced in service)
+router.post('/',        requireRole('teacher'), ctrl.createAssignment);
+router.patch('/:id',    requireRole('teacher'), ctrl.updateAssignment);
+router.delete('/:id',   requireRole('teacher'), ctrl.deleteAssignment);
 
 module.exports = router;

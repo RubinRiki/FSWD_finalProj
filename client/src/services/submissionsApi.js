@@ -1,54 +1,17 @@
 import api from './api';
 
-export const createAssignment = (courseId, payload) =>
-  api.post('/assignments', { courseId, ...payload }).then(r => r.data);
+// Upload (student only; server derives student from JWT)
+export const createSubmission = (assignmentId, file, note = '') => {
+  const form = new FormData();
+  form.append('assignment', assignmentId);
+  form.append('file', file);
+  if (note) form.append('note', note);
 
-export const updateAssignment = (id, payload) =>
-  api.patch(`/assignments/${id}`, payload).then(r => r.data);
-
-export const deleteAssignment = (id) =>
-  api.delete(`/assignments/${id}`).then(r => r.data);
-
-export const getAssignment = (id, params = {}) =>
-  api.get(`/assignments/${id}`, { params: { include: 'course,stats', ...params } }).then(r => r.data);
-
-export const getSubmissions = (assignmentId, params = {}) =>
-  api
-    .get('/submissions', { params: { assignment: assignmentId, sort: '-submittedAt', ...params } })
-    .then(r => r.data);
-
-export const bulkUpdateSubmissions = (assignmentId, updates) =>
-  api.patch('/submissions/bulk', { assignment: assignmentId, updates }).then(r => r.data);
-
-export const openSubmissionFile = async (id) => {
-  const res = await api.get(`/submissions/${id}/file?disposition=inline`, { responseType: 'blob' });
-  const url = URL.createObjectURL(res.data);
-  window.open(url, '_blank', 'noopener');
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return api.post('/submissions/upload', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(r => r.data);
 };
 
-export const createSubmission = (assignmentId, studentId, file) => {
-  const formData = new FormData();
-  formData.append("assignmentId", assignmentId);
-  formData.append("studentId", studentId);
-  formData.append("file", file);
-
-  return api
-    .post("/submissions", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    })
-    .then((r) => r.data);
-};
-
-
-export const downloadSubmissionFile = async (id) => {
-  const res = await api.get(`/submissions/${id}/file?disposition=attachment`, { responseType: 'blob' });
-  const url = URL.createObjectURL(res.data);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'submission';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-};
+// Delete specific submission (owner student OR teacher owner-of-course)
+export const deleteSubmission = (submissionId) =>
+  api.delete(`/submissions/${submissionId}`).then(r => r.data);

@@ -5,10 +5,8 @@ const courseSchema = new mongoose.Schema({
   description: { type: String, default: '' },
   createdBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   createdAt:   { type: Date, default: Date.now }
-});
-
+}, { timestamps: true }); 
 courseSchema.index({ createdBy: 1, createdAt: -1 });
-
 courseSchema.index({ title: 'text', description: 'text' }, { weights: { title: 5, description: 1 } });
 
 module.exports = mongoose.model('Course', courseSchema);

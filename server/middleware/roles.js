@@ -1,7 +1,19 @@
-exports.requireRole = (...roles) => (req, res, next) => {
-  const role = req.user?.role;
-  if (!role || !roles.includes(role)) {
+// Simple role guards based on req.auth.role
+
+function requireRole(role) {
+  return (req, res, next) => {
+    const r = req.auth?.role || req.user?.role; // tolerate legacy
+    if (r === role) return next();
     return res.status(403).json({ error: 'Forbidden' });
-  }
-  next();
-};
+  };
+}
+
+function requireAnyRole(roles = []) {
+  return (req, res, next) => {
+    const r = req.auth?.role || req.user?.role;
+    if (roles.includes(r)) return next();
+    return res.status(403).json({ error: 'Forbidden' });
+  };
+}
+
+module.exports = { requireRole, requireAnyRole };
