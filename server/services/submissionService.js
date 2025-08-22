@@ -201,22 +201,19 @@ async function deleteSubmission({ id, requester }) {
   if (!sub) { const e = new Error('Not found'); e.status = 404; throw e; }
 
   const userId = String(requester?.userId || '');
-  const role   = requester?.role;
+  const role = requester?.role;
+  if (role !== 'student' || String(sub.studentId) !== userId) { const e = new Error('Forbidden'); e.status = 403; throw e; }
 
-  if (role === 'student') {
-    if (String(sub.studentId) !== userId) { const e = new Error('Forbidden'); e.status = 403; throw e; }
-  } else if (role === 'teacher') {
-    await ensureTeacherOwnsAssignment(userId, sub.assignmentId);
-  } else {
-    const e = new Error('Forbidden'); e.status = 403; throw e;
-  }
+  const asg = await Assignment.findById(sub.assignmentId).select('dueDate').lean();
+  const now = new Date();
+  if (asg?.dueDate && now > asg.dueDate) { const e = new Error('Deadline passed'); e.status = 409; throw e; }
 
   await Submission.deleteOne({ _id: sub._id });
 
   const key = sub.fileKey || nameFromUrl(sub.fileUrl || '');
   if (key) {
     const fp = path.join(SUBMISSIONS_DIR, key);
-    fs.promises.unlink(fp).catch(() => void 0); // ignore if missing
+    try { await fs.promises.unlink(fp); } catch (_) {}
   }
   return true;
 }

@@ -147,7 +147,7 @@ export default function StudentDashboard() {
         </div>
       </header>
 
-      <section className="td-panel" aria-live="polite">
+      {/* <section className="td-panel" aria-live="polite">
         <h2 className="td-section-title">
           <span style={{display:'inline-flex',alignItems:'center',gap:8}}>
             <MdCalendarToday size={16} /> Assignments Due This Week
@@ -179,7 +179,7 @@ export default function StudentDashboard() {
             ))}
           </ul>
         )}
-      </section>
+      </section> */}
 
       <nav className="cd-tabs" role="tablist" aria-label="Student tabs" style={{marginTop:10}}>
         <TabButton active={tab === 'my'} onClick={() => setTab('my')} label="MY COURSES" />

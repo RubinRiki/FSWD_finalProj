@@ -152,12 +152,17 @@ async function deleteCourse({ userId, courseId }) {
   if (!course) { const e = new Error('Course not found'); e.status = 404; throw e; }
   if (String(course.createdBy) !== String(uId)) { const e = new Error('Forbidden'); e.status = 403; throw e; }
 
-  const hasAssignments = await Assignment.exists({ courseId: cId });
-  if (hasAssignments) { const e = new Error('Course has assignments'); e.status = 409; throw e; }
+  const now = new Date();
+  const hasOpenAssignments = await Assignment.exists({ courseId: cId, dueDate: { $gte: now } });
+  if (hasOpenAssignments) { const e = new Error('Course has open assignments'); e.status = 409; throw e; }
+
+  const hasApprovedEnrollments = await Enrollment.exists({ courseId: cId, status: 'approved' });
+  if (hasApprovedEnrollments) { const e = new Error('Course has enrolled students'); e.status = 409; throw e; }
 
   await Course.deleteOne({ _id: cId });
   return true;
 }
+
 
 async function listCatalog({ userId, q = '', sort = '-createdAt', page = 1, limit = 12 }) {
   const uId = toOid(userId);

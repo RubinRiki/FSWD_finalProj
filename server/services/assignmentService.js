@@ -115,16 +115,20 @@ async function updateAssignment({ id, payload = {}, requester }) {
 }
 
 // Delete
-async function deleteAssignment({ id, requester }) {
-  if (!requester?.userId) throw Object.assign(new Error('Forbidden'), { status: 403 });
-  await ensureTeacherOwnsAssignment(requester.userId, id);
 
-  const _id = toOid(id);
-  const hasSubs = await Submission.exists({ assignmentId: _id });
-  if (hasSubs) throw Object.assign(new Error('Assignment has submissions'), { status: 409 });
+async function deleteAssignment({ userId, assignmentId }) {
+  const aId = toOid(assignmentId);
+  const ass = await Assignment.findById(aId).select('courseId dueDate').lean();
+  if (!ass) { const e = new Error('Assignment not found'); e.status = 404; throw e; }
 
-  const res = await Assignment.deleteOne({ _id });
-  if (!res.deletedCount) throw Object.assign(new Error('Not found'), { status: 404 });
+  const course = await Course.findById(ass.courseId).select('createdBy').lean();
+  if (!course || String(course.createdBy) !== String(userId)) { const e = new Error('Forbidden'); e.status = 403; throw e; }
+
+  const now = new Date();
+  const hasSubs = await Submission.exists({ assignmentId: aId });
+  if (hasSubs && (!ass.dueDate || ass.dueDate >= now)) { const e = new Error('Assignment has submissions and is still open'); e.status = 409; throw e; }
+
+  await Assignment.deleteOne({ _id: aId });
   return true;
 }
 
