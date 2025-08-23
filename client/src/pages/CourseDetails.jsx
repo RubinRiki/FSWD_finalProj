@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext,useMemo  } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MdArrowBack, MdAssignment, MdPeople, MdCalendarToday, MdEdit, MdDelete, MdAdd } from 'react-icons/md';
 
@@ -62,6 +62,21 @@ export default function CourseDetails() {
 
   const asg = useResource(() => getAssignments(courseId));
   const std = useResource(() => getStudents(courseId));
+
+  // number of assignments due within the next 7 days (excluding past / missing dueDate)
+  const upcomingCount = useMemo(() => {
+    if (!Array.isArray(asg.data)) return 0;
+    const now = Date.now();
+    const in7Days = now + 7 * 24 * 60 * 60 * 1000;
+    let count = 0;
+    for (const a of asg.data) {
+      if (!a?.dueDate) continue;
+      const t = Date.parse(a.dueDate);
+      if (Number.isNaN(t)) continue;
+      if (t >= now && t <= in7Days) count++;
+    }
+    return count;
+  }, [asg.data]);
 
   useEffect(() => {
     const resetPanels = () => {
@@ -136,6 +151,7 @@ export default function CourseDetails() {
   }
 
   return (
+    <div className='page-container '>
     <div className="cd">
       <div className="cd-header">
         <button className="cd-back" onClick={() => navigate(-1)}>
@@ -169,7 +185,7 @@ export default function CourseDetails() {
       <section className="cd-stats">
         <Stat tone="purple" label="Assignments" value={loadingCourse ? null : course?.stats?.assignments ?? '-'} icon={<MdAssignment size={18} />} />
         <Stat tone="teal" label="Students" value={loadingCourse ? null : course?.stats?.students ?? '-'} icon={<MdPeople size={18} />} />
-        <Stat tone="amber" label="Upcoming due" value={loadingCourse ? null : course?.stats?.upcoming ?? '-'} icon={<MdCalendarToday size={18} />} />
+        <Stat tone="amber" label="Upcoming due" value={!asg.loaded && asg.loading ? null : upcomingCount} icon={<MdCalendarToday size={18} />} />
       </section>
 
       <nav className="cd-tabs" role="tablist" aria-label="Course tabs">
@@ -241,6 +257,8 @@ export default function CourseDetails() {
         )}
       </div>
     </div>
+  </div>
+
   );
 }
 

@@ -108,6 +108,8 @@ export default function TeacherDashboard() {
   };
 
   return (
+    <div className='page-container '>
+
     <div className="td-container">
       <header className="td-header">
         <h1 className="td-title">Hello, {teacherName}</h1>
@@ -221,6 +223,7 @@ export default function TeacherDashboard() {
           )}
         </section>
       )}
+    </div>
     </div>
   );
 }

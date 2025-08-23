@@ -135,8 +135,31 @@ export default function StudentDashboard() {
       }
     }
   };
+  function rankCourse(c) {
+  const s =
+    c.enrollmentStatus ||
+    c.status ||
+    c.enrollment?.status ||
+    c.myStatus ||
+    (c.pending ? 'pending' : 'none');
+
+  return s === 'pending' ? 0 : 1;
+}
+const catalogList = useMemo(() => {
+  const qLower = (q || '').toLowerCase();
+
+  const filtered = (catalog.items || []).filter(c =>
+    qLower ? (c.title || '').toLowerCase().includes(qLower) : true
+  );
+
+  return [...filtered].sort((a, b) => rankCourse(a) - rankCourse(b));
+}, [catalog.items, q]);
+
+
 
   return (
+    <div className='page-container '>
+
     <div className="td-container">
       <header className="td-header">
         <h1 className="td-title">Hello, {studentName}</h1>
@@ -260,10 +283,8 @@ export default function StudentDashboard() {
               <div className="td-notice empty">No courses found.</div>
             ) : (
               <div className="td-grid">
-                {catalog.items
-                  .filter(c => (q ? (c.title || '').toLowerCase().includes(q.toLowerCase()) : true))
-                  .slice(0, limit)
-                  .map(c => {
+                
+                 {catalogList.slice(0, limit).map((c) => {
                     const status = c.enrollmentStatus || 'none';
                     return (
                       <div key={c._id || c.id} className="td-card">
@@ -285,6 +306,7 @@ export default function StudentDashboard() {
           </>
         )}
       </div>
+    </div>
     </div>
   );
 }

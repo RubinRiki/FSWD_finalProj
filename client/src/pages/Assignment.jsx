@@ -96,21 +96,15 @@ export default function Assignment() {
   const due = dueInfo(info?.dueDate);
 
   return (
+    <div className='page-container '>
     <div className="as">
       <div className="as-topbar">
         <button className="as-back" onClick={() => navigate(-1)}><MdArrowBack size={18}/> Back</button>
         <div className="as-title">{info?.title || 'Assignment'}</div>
         <div className="as-actions">
-  <button className="as-iconbtn" onClick={onEditAssignment} aria-label="Edit">
-    <MdEdit />
-    <span className="sr-only">Edit</span>
-  </button>
-  <button className="as-iconbtn danger" onClick={onDeleteAssignment} aria-label="Delete">
-    <MdDelete />
-    <span className="sr-only">Delete</span>
-  </button>
-</div>
-
+         <button className="as-btn ghost sm" onClick={onEditAssignment}><MdEdit size={16}/><span>Edit</span></button>
+         <button className="as-btn ghost danger sm" onClick={onDeleteAssignment}><MdDelete size={16}/><span>Delete</span></button>
+       </div>
       </div>
 
       {info && (
@@ -194,6 +188,7 @@ export default function Assignment() {
           </>
         )}
       </div>
+    </div>
     </div>
   );
 }

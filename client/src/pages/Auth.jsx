@@ -65,11 +65,6 @@ export default function Auth() {
         <div className="form-container sign-up-container">
           <form onSubmit={handleRegisterSubmit} noValidate>
             <h1>Create Account</h1>
-            <div className="social-container">
-              <a href="#" className="social" aria-label="Facebook"><i className="fab fa-facebook-f" /></a>
-              <a href="#" className="social" aria-label="Google"><i className="fab fa-google-plus-g" /></a>
-              <a href="#" className="social" aria-label="LinkedIn"><i className="fab fa-linkedin-in" /></a>
-            </div>
             <span>or use your email for registration</span>
             <input type="text" name="name" placeholder="Name" value={registerData.name} onChange={handleRegisterChange} required />
             <input type="email" name="email" placeholder="Email" value={registerData.email} onChange={handleRegisterChange} required />
@@ -91,11 +86,6 @@ export default function Auth() {
         <div className="form-container sign-in-container">
           <form onSubmit={handleLoginSubmit} noValidate>
             <h1>Sign in</h1>
-            <div className="social-container">
-              <a href="#" className="social" aria-label="Facebook"><i className="fab fa-facebook-f" /></a>
-              <a href="#" className="social" aria-label="Google"><i className="fab fa-google-plus-g" /></a>
-              <a href="#" className="social" aria-label="LinkedIn"><i className="fab fa-linkedin-in" /></a>
-            </div>
             <span>or use your account</span>
             <input type="email" name="email" placeholder="Email" value={loginData.email} onChange={handleLoginChange} required />
             <input type="password" name="password" placeholder="Password" value={loginData.password} onChange={handleLoginChange} required />
