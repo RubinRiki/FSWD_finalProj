@@ -22,9 +22,15 @@ export default function Auth() {
   });
   const [registerError, setRegisterError] = useState('');
 
-  const handleLoginChange = (e) => setLoginData({ ...loginData, [e.target.name]: e.target.value });
-  const handleRegisterChange = (e) => setRegisterData({ ...registerData, [e.target.name]: e.target.value });
+const handleRegisterChange = (e) => {
+  if (registerError) setRegisterError('');
+  setRegisterData({ ...registerData, [e.target.name]: e.target.value });
+};
 
+const handleLoginChange = (e) => {
+  if (loginError) setLoginError('');
+  setLoginData({ ...loginData, [e.target.name]: e.target.value });
+};
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError('');
@@ -39,22 +45,29 @@ export default function Auth() {
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     setRegisterError('');
-    if (registerData.password !== registerData.confirmPassword) {
-      setRegisterError('Passwords do not match');
-      return;
+   const name = registerData.name.trim();
+   const email = registerData.email.trim();
+   const password = registerData.password;
+   const confirm = registerData.confirmPassword;
+   if (password !== confirm) {
+     setRegisterError('Passwords do not match');
+     return;
     }
     try {
-      await register({
-        name: registerData.name,
-        email: registerData.email,
-        role: registerData.role,
-        password: registerData.password
-      });
+      await register({ name, email, role: registerData.role, password });
       setMode('signin');
     } catch (err) {
-      setRegisterError(err?.response?.data?.message || err?.message || 'Registration failed');
-    }
-  };
+      const status = err?.response?.status;
+      const serverMsg = err?.response?.data?.message;
+      const msg =
+        status === 409
+          ? (serverMsg || 'This email is already registered')
+          : status === 400
+          ? (serverMsg || 'Invalid registration details')
+          : (serverMsg || err?.message || 'Registration failed');
+    setRegisterError(msg);
+  }
+};
 
   const goSignUp = () => setMode('signup');
   const goSignIn = () => setMode('signin');
