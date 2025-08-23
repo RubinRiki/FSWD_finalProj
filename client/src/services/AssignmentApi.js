@@ -14,6 +14,19 @@ export const deleteAssignment = (id) =>
 export const getAssignment = (id, params = {}) =>
   api.get(`/assignments/${id}`, { params: { include: 'course,stats', ...params } }).then(r => r.data);
 
+export const listAssignmentsDueThisWeek = (params = {}) =>
+  api.get('/assignments/weekly', {
+    params: {
+      limit: 6,
+      ...params      
+    }
+  })
+  .then((res) => res.data)
+  .catch((err) => {
+   const msg = err?.response?.data?.message || err?.message || 'Failed to load weekly assignments';
+    throw new Error(msg);
+  });
+
 // LIST submissions for an assignment
 // TEACHER: all submissions (server will authorize & allow all)
 // STUDENT: own submissions only (server scopes by JWT)

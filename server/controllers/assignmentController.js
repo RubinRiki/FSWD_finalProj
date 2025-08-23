@@ -15,6 +15,18 @@ async function listAssignments(req, res, next) {
     next(err);
   }
 }
+async function listAssignmentsDueThisWeek(req, res, next) {
+  try {
+    const studentId = req.auth?.userId || req.user?.id || req.user?._id;
+    const { limit } = req.query;
+    const data = await service.listAssignmentsDueThisWeek({ studentId, limit });
+    res.json(data);
+  } catch (err) {
+    const status = err.status || 500;
+    if (status !== 500) return res.status(status).json({ error: err.message });
+    next(err);
+  }
+}
 
 async function getAssignment(req, res, next) {
   try {
@@ -73,5 +85,6 @@ module.exports = {
   getAssignment,
   createAssignment,
   updateAssignment,
-  deleteAssignment
+  deleteAssignment,
+  listAssignmentsDueThisWeek
 };

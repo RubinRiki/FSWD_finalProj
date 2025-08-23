@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useContext } from 'react';
 import { MdRefresh, MdLogout, MdCalendarToday } from 'react-icons/md';
 import CourseCard from '../components/CourseCard';
+import { listAssignmentsDueThisWeek } from '../services/AssignmentApi';
 import { AuthContext } from '../context/AuthContext';
 
 import {
@@ -38,48 +39,51 @@ export default function StudentDashboard() {
     return d.toISOString();
   }, []);
 
-  const loadMine = async () => {
-    setLoading(true); setErr('');
-    try {
-      const data = await getMyCourses({ limit: 1000, sort: '-createdAt' });
-      const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
-      setCourses(list);
+  const loadWeeklyAssignments = async () => {
+  setWeekly({ loading: true, error: '', items: [] });
+  try {
+    const data = await listAssignmentsDueThisWeek(); 
+    setWeekly({ loading: false, error: '', items: data });
+  } catch (e) {
+    const msg = e.message || 'Failed to load weekly assignments';
+    setWeekly({ loading: false, error: msg, items: [] });
+  }
+};
 
-      setWeekly({ loading: true, error: '', items: [] });
-      const ids = list.map(c => c._id || c.id).filter(Boolean);
-      if (ids.length === 0) {
-        setWeekly({ loading: false, error: '', items: [] });
-      } else {
-        const results = await Promise.allSettled(
-          ids.map((id) => getStudentAssignments(id, { dueTo: weekToISO, sort: 'dueDate', limit: 50 }))
-        );
-        const items = [];
-        results.forEach((res, idx) => {
-          const course = list[idx];
-          if (res.status === 'fulfilled' && Array.isArray(res.value)) {
-            res.value.forEach((a) => {
-              if (!a?.dueDate) return;
-              items.push({
-                id: a._id || a.id,
-                title: a.title || 'Untitled assignment',
-                dueDate: a.dueDate,
-                courseTitle: course?.title || course?.name || 'Course',
-              });
-            });
-          }
-        });
-        items.sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate));
-        setWeekly({ loading: false, error: '', items: items.slice(0, 6) });
-      }
-    } catch (e) {
-      const msg = e?.response?.data?.error || e?.message || 'Failed to load data';
-      setErr(msg);
-      alertError('Load error', msg);
+const loadMine = async () => {
+  setLoading(true);
+  setErr('');
+  try {
+    const data = await getMyCourses({ limit: 1000, sort: '-createdAt' });
+    const list = Array.isArray(data)
+      ? data
+      : (Array.isArray(data?.data) ? data.data : []);
+    setCourses(list);
+
+    setWeekly({ loading: true, error: '', items: [] });
+    try {
+      const weeklyData = await listAssignmentsDueThisWeek();
+      setWeekly({ loading: false, error: '', items: weeklyData });
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to load weekly assignments';
       setWeekly({ loading: false, error: msg, items: [] });
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (e) {
+    const msg = e?.response?.data?.error || e?.message || 'Failed to load courses';
+    setErr(msg);
+    alertError('Load error', msg);
+
+    try {
+      const weeklyData = await listAssignmentsDueThisWeek();
+      setWeekly({ loading: false, error: '', items: weeklyData });
+    } catch (err) {
+      const msg2 = err?.response?.data?.message || err?.message || 'Failed to load weekly assignments';
+      setWeekly({ loading: false, error: msg2, items: [] });
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   const loadCatalog = async () => {
     setCatalog(s => ({ ...s, loading: true, error: '' }));
@@ -170,7 +174,7 @@ const catalogList = useMemo(() => {
         </div>
       </header>
 
-      {/* <section className="td-panel" aria-live="polite">
+       {<section className="td-panel" aria-live="polite">
         <h2 className="td-section-title">
           <span style={{display:'inline-flex',alignItems:'center',gap:8}}>
             <MdCalendarToday size={16} /> Assignments Due This Week
@@ -202,8 +206,8 @@ const catalogList = useMemo(() => {
             ))}
           </ul>
         )}
-      </section> */}
-
+      </section> 
+}
       <nav className="cd-tabs" role="tablist" aria-label="Student tabs" style={{marginTop:10}}>
         <TabButton active={tab === 'my'} onClick={() => setTab('my')} label="MY COURSES" />
         <TabButton active={tab === 'catalog'} onClick={() => setTab('catalog')} label="ALL COURSES" />

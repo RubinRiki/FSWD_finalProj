@@ -2,6 +2,7 @@ const mongoose   = require('mongoose');
 const Assignment = require('../models/Assignment');
 const Submission = require('../models/Submission');
 const Course     = require('../models/Course');
+const Enrollment = require('../models/Enrollment');
 const { countSubmissionsByAssignment } = require('./submissionService');
 
 const toOid = (v) => (mongoose.Types.ObjectId.isValid(v) ? new mongoose.Types.ObjectId(v) : v);
@@ -143,11 +144,63 @@ async function countAssignmentsByCourseIds(courseIds = []) {
   return new Map(rows.map(r => [String(r._id), r.c]));
 }
 
+async function listAssignmentsDueThisWeek({ studentId, limit = 6 }) {
+  if (!studentId) { const e = new Error('Forbidden'); e.status = 403; throw e; }
+
+  const enrolls = await Enrollment.find({
+    $or: [{ student: studentId }, { studentId }],
+    status: { $in: ['approved', 'active', 'enrolled'] } 
+  })
+  .select('course courseId')
+  .lean();
+
+  const courseIds = enrolls
+    .map(e => e.courseId || e.course)
+    .filter(Boolean)
+    .map(id => mongoose.Types.ObjectId.isValid(id) ? id : null)
+    .filter(Boolean);
+
+  console.log('[weekly] student:', studentId, 'enrolled courses:', courseIds.length);
+
+  if (courseIds.length === 0) return [];
+
+const now = new Date();
+const end = new Date(now);
+end.setDate(end.getDate() + 7);
+end.setHours(23, 59, 59, 999);
+
+  const courseField = (Assignment.schema.path('courseId')) ? 'courseId' : 'course';
+
+  const query = {
+    [courseField]: { $in: courseIds },
+    dueDate: { $gte: now, $lte: end }
+  };
+
+  console.log('[weekly] query:', { courseField, from: now.toISOString(), to: end.toISOString(), courses: courseIds.length });
+
+  const rows = await Assignment.find(query)
+    .select(`title dueDate ${courseField}`)
+    .populate({ path: courseField, select: 'title name' })
+    .sort({ dueDate: 1 })
+    .limit(Math.min(parseInt(limit, 10) || 6, 50))
+    .lean();
+
+  console.log('[weekly] found assignments:', rows.length);
+
+  return rows.map(r => ({
+    id: r._id,
+    title: r.title || 'Untitled assignment',
+    dueDate: r.dueDate,
+    courseTitle: r[courseField]?.title || r[courseField]?.name || 'Course'
+  }));
+}
+
 module.exports = {
   listAssignmentsForCourse,
   getAssignmentById,
   createAssignment,
   updateAssignment,
   deleteAssignment,
-  countAssignmentsByCourseIds
+  countAssignmentsByCourseIds,
+  listAssignmentsDueThisWeek
 };
