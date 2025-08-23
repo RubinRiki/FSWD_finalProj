@@ -29,32 +29,31 @@ export const getMySubmissions = (assignmentId) => listSubmissions(assignmentId);
 export const bulkUpdateSubmissions = (assignmentId, updates) =>
   api.patch('/submissions/bulk', { assignment: assignmentId, updates }).then(r => r.data);
 
-// File view/download helpers
-export const openSubmissionFile = async (id) => {
+// View file in a new tab (blob) – keeps Authorization via Axios
+export async function openSubmissionFile(id) {
   const res = await api.get(`/submissions/${id}/file`, {
+    responseType: 'blob',
     params: { disposition: 'inline' },
-    responseType: 'blob'
   });
-  const url = URL.createObjectURL(res.data);
-  window.open(url, '_blank', 'noopener,noreferrer');
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
-};
+const blob = new Blob([res.data], { type: res.headers['content-type'] || 'application/pdf' });
+const url = URL.createObjectURL(blob);  window.open(url, '_blank', 'noopener,noreferrer');
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
 
-export const downloadSubmissionFile = async (id) => {
-  const res = await api.get(`/submissions/${id}/file`, {
+// Download file with its server-provided filename
+export async function downloadSubmissionFile(id) {
+ const res = await api.get(`/submissions/${id}/file`, {
+    responseType: 'blob',
     params: { disposition: 'attachment' },
-    responseType: 'blob'
   });
-  const cd = res.headers?.['content-disposition'] || '';
-  const m = cd.match(/filename="?([^"]+)"?/i);
-  const filename = m?.[1] || 'submission';
-
-  const url = URL.createObjectURL(res.data);
+  const dispo = res.headers['content-disposition'] || '';
+  const m = dispo.match(/filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i);
+  const name = decodeURIComponent(m?.[1] || m?.[2] || 'submission');
+ const blob = new Blob([res.data], { type: res.headers['content-type'] || 'application/pdf' });
+  const blobUrl = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-};
+  a.href = blobUrl; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+}
+

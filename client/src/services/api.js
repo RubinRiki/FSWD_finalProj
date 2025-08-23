@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-const api = axios.create({
-  baseURL: import.meta.env?.VITE_API_BASE_URL || process.env.REACT_APP_API_BASE_URL || '/api'
-});
+// חירום: מצביע ישירות לשרת dev
+const api = axios.create({ baseURL: 'http://localhost:5000/api' });
 
 api.interceptors.request.use((config) => {
   const t = localStorage.getItem('token');
@@ -11,12 +10,10 @@ api.interceptors.request.use((config) => {
 });
 
 let handling401 = false;
-
 api.interceptors.response.use(
   r => r,
   err => {
-    const s = err?.response?.status;
-    if (s === 401 && !handling401) {
+    if (err?.response?.status === 401 && !handling401) {
       handling401 = true;
       localStorage.removeItem('token');
       localStorage.removeItem('user');

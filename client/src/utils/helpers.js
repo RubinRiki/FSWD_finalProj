@@ -40,46 +40,7 @@ export function toLocalInputValue(iso) {
   return new Date(d.getTime() - tz).toISOString().slice(0, 16);
 }
 
-/* ---------- Submission/file helpers ---------- */
 
-/** Normalize a file URL string; return '' when empty/"null"/"undefined". */
-export function fileUrlFromRow(r) {
-  const t = (r?.fileUrl ?? '').toString().trim();
-  const low = t.toLowerCase();
-  return t && low !== 'null' && low !== 'undefined' ? t : '';
-}
-
-/**
- * Decide how to fetch a submission file:
- * - If URL exists -> { type:'url', value:<url> }
- * - Else if row has _id -> { type:'id', value:<_id> } (use API open/download)
- * - Else -> null
- */
-export function getRowFileTarget(r) {
-  const url = fileUrlFromRow(r);
-  if (url) return { type: 'url', value: url };
-  if (r?._id) return { type: 'id', value: r._id };
-  return null;
-}
-
-export function viewFile(row) {
-  const target = getRowFileTarget(row);
-  if (!target) { toast('No file attached'); return; }
-  if (target.type === 'url') window.open(target.value, '_blank', 'noopener,noreferrer');
-  else openSubmissionFile(target.value);
-}
-
-export function downloadFile(row) {
-  const target = getRowFileTarget(row);
-  if (!target) { toast('No file attached'); return; }
-  if (target.type === 'url') {
-    const a = document.createElement('a');
-    a.href = target.value; a.target = '_blank'; a.rel = 'noopener';
-    a.click();
-  } else {
-    downloadSubmissionFile(target.value);
-  }
-}
 
 /* ---------- SweetAlert forms (course/assignment) ---------- */
 
@@ -128,4 +89,16 @@ export async function promptAssignment(initial = {}) {
   const out = { title: values.title.trim(), description: values.description.trim() };
   if (values.dueDate) out.dueDate = new Date(values.dueDate).toISOString();
   return out;
+}
+
+export function viewFile(row) {
+  const id = row?._id;
+  if (!id) { toast('No file attached'); return; }
+  openSubmissionFile(id);
+}
+
+export function downloadFile(row) {
+  const id = row?._id;
+  if (!id) { toast('No file attached'); return; }
+  downloadSubmissionFile(id);
 }

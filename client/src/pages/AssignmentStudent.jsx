@@ -8,7 +8,7 @@ import { getAssignment, getMySubmissions } from '../services/AssignmentApi';
 import { createSubmission, deleteSubmission } from '../services/submissionsApi';
 
 import { confirm, success, error as alertError } from '../utils/alerts';
-import { dueInfo, viewFile, fileUrlFromRow } from '../utils/helpers';
+import { dueInfo, viewFile, downloadFile  } from '../utils/helpers';
 import './Assignment.css';
 
 function fileNameFromUrl(url) {
@@ -80,6 +80,24 @@ export default function AssignmentStudent() {
   const isClosed = due?.status === 'closed';
   const hasSubmission = subs.length > 0;
 
+function handleFileChange(e) {
+  const f = e.target.files?.[0] || null;
+  if (!f) { setFile(null); return; }
+
+  const isPdf =
+    f.type === 'application/pdf' ||
+    f.name.toLowerCase().endsWith('.pdf');
+
+  if (!isPdf) {
+    window.Swal?.fire?.('Only PDF is allowed', '', 'error');
+    e.target.value = '';
+    setFile(null);
+    return;
+  }
+  setFile(f);
+}
+
+
   return (
     <div className="as">
       <div className="as-topbar">
@@ -132,9 +150,8 @@ export default function AssignmentStudent() {
             </div>
             <ul className="as-list">
               {subs.map(s => {
-                const url = fileUrlFromRow(s);
-                const hasFile = !!url;
-                const name = s.fileName || fileNameFromUrl(url);
+                const hasFile = !!(s.fileKey || s._id);
+                const name = s.fileName || 'SUBMISSION';
                 return (
                   <li key={s._id} className="as-row">
                     <div className="as-cell"><div className="as-name">{name}</div></div>
@@ -168,11 +185,13 @@ export default function AssignmentStudent() {
         <div className="as-panel" style={{ marginTop: 8 }}>
           <h3 className="as-h3">Upload new submission</h3>
           <div className="as-upload">
-            <input
-              type="file"
-              className="as-input"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-            />
+           <input
+            type="file"
+            className="as-input"
+            accept="application/pdf"
+            onChange={handleFileChange}
+          />
+
             <button className="as-btn primary" onClick={handleUpload} disabled={!file}>Upload</button>
           </div>
         </div>

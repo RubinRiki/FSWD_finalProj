@@ -8,17 +8,8 @@ fs.mkdirSync(SUBMISSIONS_DIR, { recursive: true });
 const MAX_MB = parseInt(process.env.MAX_UPLOAD_MB || '25', 10);
 const limits = { fileSize: MAX_MB * 1024 * 1024 };
 
-const ALLOWED = new Set([
-  'application/pdf',
-  'text/plain',
-  'application/zip',
-  'application/x-zip-compressed',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'image/png',
-  'image/jpeg',
-  'image/webp'
-]);
+const ALLOWED = new Set(['application/pdf']);
+
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, SUBMISSIONS_DIR),
@@ -30,8 +21,12 @@ const storage = multer.diskStorage({
 });
 
 function fileFilter(_req, file, cb) {
-  if (ALLOWED.has(file.mimetype)) return cb(null, true);
-  cb(new Error('Unsupported file type'));
+  const okMime = ALLOWED.has(file.mimetype);
+  const okExt  = path.extname(file.originalname || '').toLowerCase() === '.pdf';
+  if (okMime && okExt) return cb(null, true);
+  const err = new Error('Only PDF files are allowed');
+  err.status = 400;
++  cb(err);
 }
 
 const upload = multer({ storage, fileFilter, limits });

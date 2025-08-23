@@ -51,6 +51,8 @@ async function serveSubmissionFile(req, res, next) {
     const { absPath, downloadName } = await svc.getSubmissionFilePath({ submissionId: req.params.id, requester: requester(req) });
     const disposition = req.query.disposition === 'attachment' ? 'attachment' : 'inline';
     res.setHeader('Content-Disposition', `${disposition}; filename="${downloadName}"`);
+    res.type('application/pdf'); 
+    res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
     res.sendFile(absPath);
   } catch (err) {
     const status = err.status || 500;

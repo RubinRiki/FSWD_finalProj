@@ -34,7 +34,7 @@ app.use('/api/submissions', submissionsRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-if (process.env.NODE_ENV !== 'production') {
+/* if (process.env.NODE_ENV !== 'production') {
   const listEndpoints = require('express-list-endpoints');
 
   function withPrefix(prefix, routesArr) {
@@ -63,7 +63,7 @@ if (process.env.NODE_ENV !== 'production') {
     dedup.sort((a, b) => a.path.localeCompare(b.path));
     res.json(dedup);
   });
-}
+} */
 
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 

@@ -25,9 +25,10 @@ function parseSort(s = '-submittedAt') {
 // Build public URL for a stored key
 const publicUrlFor = (key) => {
   if (!key) return '';
-  const base = String(PUBLIC_BASE || '').replace(/\/+$/,'');
-  return `${base}/uploads/${key}`.replace(/\/{2,}/g, '/');
+  const base = String(PUBLIC_BASE || '').replace(/\/+$/, '');
+  return base ? `${base}/uploads/submissions/${key}` : `/uploads/submissions/${key}`;
 };
+
 
 // Robust filename extraction from URL (cross-platform)
 function nameFromUrl(u) {
