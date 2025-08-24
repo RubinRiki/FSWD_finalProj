@@ -1,6 +1,16 @@
+
+  const allowedOrigins = new Set(
+    [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      process.env.WEB_ORIGIN,
+      ...extra,
+    ].filter(Boolean)
+  );
+  
 const corsOptions = {
   origin: (origin, cb) => {
-    if (allowedOrigins.includes(origin) || !origin) cb(null, true);
+    if (allowedOrigins.has(origin) || !origin) cb(null, true);
     else cb(new Error('Not allowed by CORS'));
   },
   credentials: true,
