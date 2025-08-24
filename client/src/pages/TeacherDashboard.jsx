@@ -5,6 +5,9 @@ import { AuthContext } from '../context/AuthContext';
 import { listMyCourses as getCoursesList, createCourse } from '../services/courseApi';
 import { listPendingRequests, approveEnrollment, rejectEnrollment } from '../services/enrollmentApi';
 import { confirm, toast, error, promptCourse } from '../utils/alerts';
+import DataPanel from '../components/DataPanel';
+import TabButton from '../components/TabButton';
+
 import './TeacherDashboard.css';
 
 function initials(name) {
@@ -108,122 +111,118 @@ export default function TeacherDashboard() {
   };
 
   return (
-    <div className='page-container '>
-
-    <div className="td-container">
-      <header className="td-header">
-        <h1 className="td-title">Hello, {teacherName}</h1>
-        <div className="td-header-actions">
-          <button className="td-btn primary" disabled={loading} onClick={handleCreateClick}>
-            <MdAddCircle size={18} /><span>Create Course</span>
-          </button>
-          <button className="td-btn" onClick={handleLogout}>
-            <MdLogout size={18} /><span>Log out</span>
-          </button>
-        </div>
-      </header>
-
-      <nav className="cd-tabs" role="tablist" style={{ marginTop: 10 }}>
-        <button className={`cd-tab ${tab==='courses'?'active':''}`} onClick={()=>setTab('courses')} role="tab" aria-selected={tab==='courses'}>COURSES</button>
-        <button className={`cd-tab ${tab==='requests'?'active':''}`} onClick={()=>setTab('requests')} role="tab" aria-selected={tab==='requests'}>REQUESTS</button>
-      </nav>
-
-      {tab === 'courses' && (
-        <>
-          <div className="td-filters">
-            <div className="td-search">
-              <input type="search" placeholder="Search courses…" value={q} onChange={(e)=>setQ(e.target.value)} aria-label="Search courses" />
-            </div>
-            <div className="td-sort">
-              <button className={sort === '-createdAt' ? 'active' : ''} onClick={() => setSort('-createdAt')} aria-pressed={sort === '-createdAt'}>Newest</button>
-              <button className={sort === 'createdAt' ? 'active' : ''} onClick={() => setSort('createdAt')} aria-pressed={sort === 'createdAt'}>Oldest</button>
-              <button className={sort === 'title' ? 'active' : ''} onClick={() => setSort('title')} aria-pressed={sort === 'title'}>A→Z</button>
-              <button className={sort === '-title' ? 'active' : ''} onClick={() => setSort('-title')} aria-pressed={sort === '-title'}>Z→A</button>
-            </div>
-            <select className="td-limit" value={limit} onChange={(e)=>setLimit(Number(e.target.value))} aria-label="Items per page">
-              <option value={6}>6</option><option value={12}>12</option><option value={24}>24</option><option value={48}>48</option>
-            </select>
+    <div className="page-container">
+      <div className="td-container">
+        <header className="td-header">
+          <h1 className="td-title">Hello, {teacherName}</h1>
+          <div className="td-header-actions">
+            <button className="td-btn primary" disabled={loading} onClick={handleCreateClick}>
+              <MdAddCircle size={18} /><span>Create Course</span>
+            </button>
+            <button className="td-btn" onClick={handleLogout}>
+              <MdLogout size={18} /><span>Log out</span>
+            </button>
           </div>
+        </header>
 
-          {loading && (
-            <div className="td-panel td-notice">
-              <div className="td-spinner" aria-hidden />
-              <div>Loading courses…</div>
-            </div>
-          )}
+        <nav className="cd-tabs" role="tablist" style={{ marginTop: 10 }}>
+          <TabButton
+            id="tab-courses"
+            controls="panel-courses"
+            active={tab === 'courses'}
+            onClick={() => setTab('courses')}
+            label="COURSES"
+          />
+          <TabButton
+            id="tab-requests"
+            controls="panel-requests"
+            active={tab === 'requests'}
+            onClick={() => setTab('requests')}
+            label="REQUESTS"
+          />
+        </nav>
 
-          {!loading && err && (
-            <div className="td-panel td-notice error" role="alert">
-              <div>{err}</div>
-              <button className="td-btn" onClick={loadCourses}><MdRefresh size={16} /><span>Retry</span></button>
-            </div>
-          )}
-
-          {!loading && !err && (
-            courses.length === 0 ? (
-              <div className="td-panel td-notice empty">No courses yet. Click <strong>Create Course</strong>.</div>
-            ) : (
-              <section className="td-panel">
-                <h2 className="td-section-title">My Courses</h2>
-                <div className="td-grid">
-                  {courses.map((c) => (
-                    <CourseCard key={c._id} course={{ ...c, assignmentsCount: c.count ?? c.assignmentsCount ?? 0 }} />
-                  ))}
-                </div>
-              </section>
-            )
-          )}
-        </>
-      )}
-
-      {tab === 'requests' && (
-        <section className="td-panel">
-          <div className="td-panel-head">
-            <h2 className="td-section-title">Pending Requests</h2>
-            <button className="td-btn" onClick={loadRequests}><MdRefresh size={16} /><span>Refresh</span></button>
-          </div>
-
-          {reqLoading ? (
-            <div className="td-notice"><div className="td-spinner" aria-hidden /><div>Loading requests…</div></div>
-          ) : reqErr ? (
-            <div className="td-notice error" role="alert">
-              <div>{reqErr}</div>
-              <button className="td-btn" onClick={loadRequests}><MdRefresh size={16} /><span>Retry</span></button>
-            </div>
-          ) : reqs.length === 0 ? (
-            <div className="td-notice empty">No pending requests.</div>
-          ) : (
-            <div className="req-table">
-              <div className="req-head">
-                <div className="req-col name">Student</div>
-                <div className="req-col email">Email</div>
-                <div className="req-col course">Course</div>
-                <div className="req-col actions">Actions</div>
+        <div id="panel-courses" role="tabpanel" hidden={tab !== 'courses'}>
+          <DataPanel
+            state={{ loading, error: err, data: courses }}
+            emptyText={q ? `No matches for “${q}”.` : 'No courses yet.'}
+            onRetry={loadCourses}
+          >
+            <div className="td-filters">
+              <div className="td-search">
+                <input
+                  type="search"
+                  placeholder="Search courses…"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  aria-label="Search courses"
+                />
               </div>
-              {reqs.map(r => (
-                <div key={r._id} className="req-row">
-                  <div className="req-col name">
-                    <div className="req-person">
-                      <div className="req-avatar">{initials(r.student?.name)}</div>
-                      <div className="req-person-text">
-                        <div className="req-name">{r.student?.name || 'Student'}</div>
-                        <div className="req-meta">ID: {(r.student?._id || '').slice(-6)}</div>
+              <div className="td-sort">
+                <button className={sort === '-createdAt' ? 'active' : ''} onClick={() => setSort('-createdAt')} aria-pressed={sort === '-createdAt'}>Newest</button>
+                <button className={sort === 'createdAt' ? 'active' : ''} onClick={() => setSort('createdAt')} aria-pressed={sort === 'createdAt'}>Oldest</button>
+                <button className={sort === 'title' ? 'active' : ''} onClick={() => setSort('title')} aria-pressed={sort === 'title'}>A→Z</button>
+                <button className={sort === '-title' ? 'active' : ''} onClick={() => setSort('-title')} aria-pressed={sort === '-title'}>Z→A</button>
+              </div>
+              <select className="td-limit" value={limit} onChange={(e) => setLimit(Number(e.target.value))} aria-label="Items per page">
+                <option value={6}>6</option><option value={12}>12</option><option value={24}>24</option><option value={48}>48</option>
+              </select>
+            </div>
+
+            <section className="td-panel">
+              <h2 className="td-section-title">My Courses</h2>
+              <div className="td-grid">
+                {courses.map((c) => (
+                  <CourseCard key={c._id} course={{ ...c, assignmentsCount: c.count ?? c.assignmentsCount ?? 0 }} />
+                ))}
+              </div>
+            </section>
+          </DataPanel>
+        </div>
+
+        <div id="panel-requests" role="tabpanel" hidden={tab !== 'requests'}>
+          <DataPanel
+            state={{ loading: reqLoading, error: reqErr, data: reqs }}
+            emptyText="No pending requests."
+            onRetry={loadRequests}
+          >
+            <section className="td-panel">
+              <div className="td-panel-head">
+                <h2 className="td-section-title">Pending Requests</h2>
+                <button className="td-btn" onClick={loadRequests}><MdRefresh size={16} /><span>Refresh</span></button>
+              </div>
+
+              <div className="req-table">
+                <div className="req-head">
+                  <div className="req-col name">Student</div>
+                  <div className="req-col email">Email</div>
+                  <div className="req-col course">Course</div>
+                  <div className="req-col actions">Actions</div>
+                </div>
+                {reqs.map(r => (
+                  <div key={r._id} className="req-row">
+                    <div className="req-col name">
+                      <div className="req-person">
+                        <div className="req-avatar">{initials(r.student?.name)}</div>
+                        <div className="req-person-text">
+                          <div className="req-name">{r.student?.name || 'Student'}</div>
+                          <div className="req-meta">ID: {(r.student?._id || '').slice(-6)}</div>
+                        </div>
                       </div>
                     </div>
+                    <div className="req-col email">{r.student?.email || ''}</div>
+                    <div className="req-col course">{r.course?.title || 'Course'}</div>
+                    <div className="req-col actions">
+                      <button className="td-btn primary" onClick={() => onApprove(r._id)}>Approve</button>
+                      <button className="td-btn danger" onClick={() => onReject(r._id)}>Reject</button>
+                    </div>
                   </div>
-                  <div className="req-col email">{r.student?.email || ''}</div>
-                  <div className="req-col course">{r.course?.title || 'Course'}</div>
-                  <div className="req-col actions">
-                    <button className="td-btn primary" onClick={() => onApprove(r._id)}>Approve</button>
-                    <button className="td-btn danger" onClick={() => onReject(r._id)}>Reject</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-    </div>
+                ))}
+              </div>
+            </section>
+          </DataPanel>
+        </div>
+      </div>
     </div>
   );
 }

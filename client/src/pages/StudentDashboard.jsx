@@ -3,6 +3,8 @@ import { MdRefresh, MdLogout, MdCalendarToday } from 'react-icons/md';
 import CourseCard from '../components/CourseCard';
 import { listAssignmentsDueThisWeek } from '../services/AssignmentApi';
 import { AuthContext } from '../context/AuthContext';
+import DataPanel from '../components/DataPanel';
+import TabButton from '../components/TabButton';
 
 import {
   listMyCourses as getMyCourses,
@@ -174,40 +176,29 @@ const catalogList = useMemo(() => {
         </div>
       </header>
 
-       {<section className="td-panel" aria-live="polite">
-        <h2 className="td-section-title">
-          <span style={{display:'inline-flex',alignItems:'center',gap:8}}>
-            <MdCalendarToday size={16} /> Assignments Due This Week
-          </span>
-        </h2>
-        {weekly.loading ? (
-          <div className="td-notice"><div className="td-spinner" aria-hidden /><div>Loading assignments…</div></div>
-        ) : weekly.error ? (
-          <div className="td-notice empty">
-            <span>Could not load weekly assignments.</span>
-            <button className="td-btn" onClick={loadMine} style={{marginInlineStart:8}}>
-              <MdRefresh size={16} /><span>Retry</span>
-            </button>
+       <section className="td-panel" aria-live="polite">
+  <h2 className="td-section-title">Assignments Due This Week</h2>
+  <DataPanel
+    state={{ loading: weekly.loading, error: weekly.error, data: weekly.items }}
+    emptyText="No assignments due this week."
+    onRetry={loadMine}
+  >
+    <ul className="td-list">
+      {weekly.items.map((a) => (
+        <li key={a.id} className="td-row">
+          <div className="td-row-main">
+            <div className="td-row-title">{a.title}</div>
+            <div className="td-row-sub">
+              <span>{a.courseTitle}</span><span>·</span>
+              <span>Deadline: {new Date(a.dueDate).toLocaleString('en-US')}</span>
+            </div>
           </div>
-        ) : weekly.items.length === 0 ? (
-          <div className="td-notice empty">No assignments due this week.</div>
-        ) : (
-          <ul className="td-list">
-            {weekly.items.map((a) => (
-              <li key={a.id} className="td-row">
-                <div className="td-row-main">
-                  <div className="td-row-title">{a.title}</div>
-                  <div className="td-row-sub">
-                    <span>{a.courseTitle}</span><span>·</span>
-                    <span>Deadline: {new Date(a.dueDate).toLocaleString('en-US')}</span>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section> 
-}
+        </li>
+      ))}
+    </ul>
+  </DataPanel>
+</section>
+
       <nav className="cd-tabs" role="tablist" aria-label="Student tabs" style={{marginTop:10}}>
         <TabButton active={tab === 'my'} onClick={() => setTab('my')} label="MY COURSES" />
         <TabButton active={tab === 'catalog'} onClick={() => setTab('catalog')} label="ALL COURSES" />
@@ -236,17 +227,11 @@ const catalogList = useMemo(() => {
         </div>
 
         {tab === 'my' && (
-          <>
-            {loading ? (
-              <div className="td-notice"><div className="td-spinner" aria-hidden /><div>Loading courses…</div></div>
-            ) : err ? (
-              <div className="td-notice error" role="alert">
-                <div>{err}</div>
-                <button className="td-btn" onClick={loadMine}><MdRefresh size={16} /><span>Retry</span></button>
-              </div>
-            ) : courses.length === 0 ? (
-              <div className="td-notice empty">{q ? <>No matches for “{q}”.</> : <>No courses yet.</>}</div>
-            ) : (
+            <DataPanel
+              state={{ loading, error: err, data: courses }}
+              emptyText={q ? `No matches for “${q}”.` : 'No courses yet.'}
+              onRetry={loadMine}
+            >
               <div className="td-grid">
                 {courses
                   .filter(c => (q ? (c.title || '').toLowerCase().includes(q.toLowerCase()) : true))
@@ -270,44 +255,35 @@ const catalogList = useMemo(() => {
                     />
                 ))}
               </div>
-            )}
-          </>
-        )}
+            </DataPanel>
+          )}
 
         {tab === 'catalog' && (
-          <>
-            {catalog.loading ? (
-              <div className="td-notice"><div className="td-spinner" aria-hidden /><div>Loading catalog…</div></div>
-            ) : catalog.error ? (
-              <div className="td-notice error" role="alert">
-                <div>{catalog.error}</div>
-                <button className="td-btn" onClick={loadCatalog}><MdRefresh size={16} /><span>Retry</span></button>
-              </div>
-            ) : catalog.items.length === 0 ? (
-              <div className="td-notice empty">No courses found.</div>
-            ) : (
-              <div className="td-grid">
-                
-                 {catalogList.slice(0, limit).map((c) => {
-                    const status = c.enrollmentStatus || 'none';
-                    return (
-                      <div key={c._id || c.id} className="td-card">
-                        <div className="td-card-title">{c.title || 'Course'}</div>
-                        <div className="td-card-sub">{c.ownerName ? <span>By {c.ownerName}</span> : null}</div>
-                        <p className="td-card-desc">{c.description || 'No description'}</p>
-                        <div className="td-card-actions">
-                          {status === 'pending' ? (
-                            <span className="td-chip">Pending approval</span>
-                          ) : (
-                            <button className="td-btn primary" onClick={() => onEnroll(c._id || c.id)}>Enroll</button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
-          </>
+          <DataPanel
+            state={{ loading: catalog.loading, error: catalog.error, data: catalog.items }}
+            emptyText="No courses found."
+            onRetry={loadCatalog}
+          >
+            <div className="td-grid">
+              {catalogList.slice(0, limit).map((c) => {
+                const status = c.enrollmentStatus || 'none';
+                return (
+                  <div key={c._id || c.id} className="td-card">
+                    <div className="td-card-title">{c.title || 'Course'}</div>
+                    <div className="td-card-sub">{c.ownerName ? <span>By {c.ownerName}</span> : null}</div>
+                    <p className="td-card-desc">{c.description || 'No description'}</p>
+                    <div className="td-card-actions">
+                      {status === 'pending' ? (
+                        <span className="td-chip">Pending approval</span>
+                      ) : (
+                        <button className="td-btn primary" onClick={() => onEnroll(c._id || c.id)}>Enroll</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </DataPanel>
         )}
       </div>
     </div>
@@ -315,17 +291,3 @@ const catalogList = useMemo(() => {
   );
 }
 
-function TabButton({ active, onClick, label, disabled, title }) {
-  return (
-    <button
-      className={`cd-tab ${active ? 'active' : ''}`}
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      role="tab"
-      aria-selected={active}
-    >
-      {label}
-    </button>
-  );
-}

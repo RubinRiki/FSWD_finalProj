@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useContext,useMemo  } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MdArrowBack, MdAssignment, MdPeople, MdCalendarToday, MdEdit, MdDelete, MdAdd } from 'react-icons/md';
-
 import { AuthContext } from '../context/AuthContext';
 import { getCourse, getAssignments, getStudents, updateCourse, deleteCourse } from '../services/courseApi';
 import { createAssignment } from '../services/AssignmentApi';
-
 import { confirm, success, error as alertError, toast } from '../utils/alerts';
 import { dueInfo } from '../utils/helpers';
+import DataPanel from '../components/DataPanel';
+import TabButton from '../components/TabButton';
 import './CourseDetails.css';
 
 
@@ -39,14 +39,6 @@ function useResource(loader) {
   };
 
   return { data, loading, loaded, error, reload, reset, setData };
-}
-
-// Reusable data panel
-function DataPanel({ state, emptyText, onRetry, children }) {
-  if (state.loading) return <PanelLoading text="Loading…" compact />;
-  if (state.error)   return <PanelError text={state.error} onRetry={onRetry} />;
-  if (!state.data?.length) return <EmptyState text={emptyText} />;
-  return children;
 }
 
 export default function CourseDetails() {
@@ -275,29 +267,6 @@ function Stat({ label, value, icon, tone = 'purple' }) {
   );
 }
 
-function TabButton({ active, onClick, label, disabled, title }) {
-  return (
-    <button
-      className={`cd-tab ${active ? 'active' : ''}`}
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      role="tab"
-      aria-selected={active}
-    >
-      {label}
-    </button>
-  );
-}
-
-function PanelLoading({ text, compact }) {
-  return (
-    <div className={`cd-notice ${compact ? 'compact' : ''}`}>
-      <div className="cd-spinner" aria-hidden />
-      <span>{text}</span>
-    </div>
-  );
-}
 
 function PanelError({ text, onRetry }) {
   return (
@@ -306,8 +275,4 @@ function PanelError({ text, onRetry }) {
       {onRetry && <button className="cd-btn" onClick={onRetry}>Retry</button>}
     </div>
   );
-}
-
-function EmptyState({ text }) {
-  return <div className="cd-notice empty">{text}</div>;
 }
