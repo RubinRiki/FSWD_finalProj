@@ -71,7 +71,10 @@ async function updateAssignment(req, res, next) {
 
 async function deleteAssignment(req, res, next) {
   try {
-    await service.deleteAssignment({ id: req.params.id, requester: authCtx(req) });
+    await service.deleteAssignment({
+      userId: authCtx(req).userId,
+      assignmentId: req.params.id
+    });
     res.json({ data: { deleted: true } });
   } catch (err) {
     const status = err.status || 400;
